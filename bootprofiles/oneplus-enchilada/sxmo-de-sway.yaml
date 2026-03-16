@@ -1,0 +1,28 @@
+id: pmos-edge-sxmo-de-sway-oneplus-enchilada
+display_name: postmarketOS edge sxmo-de-sway oneplus-enchilada
+rootfs:
+  ext4:
+    gpt:
+      index: 1
+      android_sparseimg:
+        xz:
+          http: https://images.postmarketos.org/bpo/edge/oneplus-enchilada/sxmo-de-sway/20260315-0520/20260315-0520-postmarketOS-edge-sxmo-de-sway-1.18.0-oneplus-enchilada.img.xz
+kernel:
+  path: /vmlinuz
+  fat:
+    gpt:
+      index: 0
+      android_sparseimg:
+        xz:
+          http: https://images.postmarketos.org/bpo/edge/oneplus-enchilada/sxmo-de-sway/20260315-0520/20260315-0520-postmarketOS-edge-sxmo-de-sway-1.18.0-oneplus-enchilada.img.xz
+dtbs:
+  path: /dtbs
+  fat:
+    gpt:
+      index: 0
+      android_sparseimg:
+        xz:
+          http: https://images.postmarketos.org/bpo/edge/oneplus-enchilada/sxmo-de-sway/20260315-0520/20260315-0520-postmarketOS-edge-sxmo-de-sway-1.18.0-oneplus-enchilada.img.xz
+stage0:
+  devices:
+    oneplus-enchilada: {}

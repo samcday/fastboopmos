@@ -1,0 +1,10 @@
+oneplus-enchilada:
+  device_profiles:
+    - oneplus-enchilada
+oneplus-fajita:
+  device_profiles:
+    - oneplus-fajita
+xiaomi-beryllium:
+  device_profiles:
+    - xiaomi-beryllium-ebbg
+    - xiaomi-beryllium-tianma
