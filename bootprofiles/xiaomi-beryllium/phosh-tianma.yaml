@@ -1,0 +1,29 @@
+id: pmos-edge-phosh-xiaomi-beryllium-tianma
+display_name: postmarketOS edge phosh xiaomi-beryllium-tianma
+rootfs:
+  ext4:
+    gpt:
+      index: 1
+      android_sparseimg:
+        xz:
+          http: https://images.postmarketos.org/bpo/edge/xiaomi-beryllium/phosh/20260315-1534/20260315-1534-postmarketOS-edge-phosh-27-xiaomi-beryllium-tianma.img.xz
+kernel:
+  path: /vmlinuz
+  fat:
+    gpt:
+      index: 0
+      android_sparseimg:
+        xz:
+          http: https://images.postmarketos.org/bpo/edge/xiaomi-beryllium/phosh/20260315-1534/20260315-1534-postmarketOS-edge-phosh-27-xiaomi-beryllium-tianma.img.xz
+dtbs:
+  path: /dtbs
+  fat:
+    gpt:
+      index: 0
+      android_sparseimg:
+        xz:
+          http: https://images.postmarketos.org/bpo/edge/xiaomi-beryllium/phosh/20260315-1534/20260315-1534-postmarketOS-edge-phosh-27-xiaomi-beryllium-tianma.img.xz
+stage0:
+  devices:
+    xiaomi-beryllium-ebbg: {}
+    xiaomi-beryllium-tianma: {}

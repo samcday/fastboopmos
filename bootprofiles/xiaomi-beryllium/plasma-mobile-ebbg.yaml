@@ -1,0 +1,29 @@
+id: pmos-edge-plasma-mobile-xiaomi-beryllium-ebbg
+display_name: postmarketOS edge plasma-mobile xiaomi-beryllium-ebbg
+rootfs:
+  ext4:
+    gpt:
+      index: 1
+      android_sparseimg:
+        xz:
+          http: https://images.postmarketos.org/bpo/edge/xiaomi-beryllium/plasma-mobile/20260315-1542/20260315-1542-postmarketOS-edge-plasma-mobile-6-xiaomi-beryllium-ebbg.img.xz
+kernel:
+  path: /vmlinuz
+  fat:
+    gpt:
+      index: 0
+      android_sparseimg:
+        xz:
+          http: https://images.postmarketos.org/bpo/edge/xiaomi-beryllium/plasma-mobile/20260315-1542/20260315-1542-postmarketOS-edge-plasma-mobile-6-xiaomi-beryllium-ebbg.img.xz
+dtbs:
+  path: /dtbs
+  fat:
+    gpt:
+      index: 0
+      android_sparseimg:
+        xz:
+          http: https://images.postmarketos.org/bpo/edge/xiaomi-beryllium/plasma-mobile/20260315-1542/20260315-1542-postmarketOS-edge-plasma-mobile-6-xiaomi-beryllium-ebbg.img.xz
+stage0:
+  devices:
+    xiaomi-beryllium-ebbg: {}
+    xiaomi-beryllium-tianma: {}

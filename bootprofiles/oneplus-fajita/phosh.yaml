@@ -1,0 +1,28 @@
+id: pmos-edge-phosh-oneplus-fajita
+display_name: postmarketOS edge phosh oneplus-fajita
+rootfs:
+  ext4:
+    gpt:
+      index: 1
+      android_sparseimg:
+        xz:
+          http: https://images.postmarketos.org/bpo/edge/oneplus-fajita/phosh/20260315-0540/20260315-0540-postmarketOS-edge-phosh-27-oneplus-fajita.img.xz
+kernel:
+  path: /vmlinuz
+  fat:
+    gpt:
+      index: 0
+      android_sparseimg:
+        xz:
+          http: https://images.postmarketos.org/bpo/edge/oneplus-fajita/phosh/20260315-0540/20260315-0540-postmarketOS-edge-phosh-27-oneplus-fajita.img.xz
+dtbs:
+  path: /dtbs
+  fat:
+    gpt:
+      index: 0
+      android_sparseimg:
+        xz:
+          http: https://images.postmarketos.org/bpo/edge/oneplus-fajita/phosh/20260315-0540/20260315-0540-postmarketOS-edge-phosh-27-oneplus-fajita.img.xz
+stage0:
+  devices:
+    oneplus-fajita: {}

@@ -1,0 +1,28 @@
+id: pmos-edge-gnome-mobile-oneplus-enchilada
+display_name: postmarketOS edge gnome-mobile oneplus-enchilada
+rootfs:
+  ext4:
+    gpt:
+      index: 1
+      android_sparseimg:
+        xz:
+          http: https://images.postmarketos.org/bpo/edge/oneplus-enchilada/gnome-mobile/20260315-0522/20260315-0522-postmarketOS-edge-gnome-mobile-4-oneplus-enchilada.img.xz
+kernel:
+  path: /vmlinuz
+  fat:
+    gpt:
+      index: 0
+      android_sparseimg:
+        xz:
+          http: https://images.postmarketos.org/bpo/edge/oneplus-enchilada/gnome-mobile/20260315-0522/20260315-0522-postmarketOS-edge-gnome-mobile-4-oneplus-enchilada.img.xz
+dtbs:
+  path: /dtbs
+  fat:
+    gpt:
+      index: 0
+      android_sparseimg:
+        xz:
+          http: https://images.postmarketos.org/bpo/edge/oneplus-enchilada/gnome-mobile/20260315-0522/20260315-0522-postmarketOS-edge-gnome-mobile-4-oneplus-enchilada.img.xz
+stage0:
+  devices:
+    oneplus-enchilada: {}
