@@ -11,6 +11,8 @@ spec:
     metadata:
       labels:
         app: fastboopmos
+      annotations:
+        fastboopmos.samcday.com/caddy-config-rev: "20260319-1"
     spec:
       hostNetwork: true
       dnsPolicy: ClusterFirstWithHostNet
