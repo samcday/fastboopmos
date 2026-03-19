@@ -7,6 +7,9 @@ rootfs:
       android_sparseimg:
         xz:
           http: https://images.postmarketos.org/bpo/edge/xiaomi-beryllium/phosh/20260315-1534/20260315-1534-postmarketOS-edge-phosh-27-xiaomi-beryllium-tianma.img.xz
+          content:
+            digest: sha512:a3037ec9889eb96f73c269b20df1d4c12f29f5a1b1e5305eb90f25bfa0c33d0f7bfb67bb7d966a536e7b0259bdff149b778c13b40f4cea564a78d817a03bc771
+            size_bytes: 891173060
 kernel:
   path: /vmlinuz
   fat:
@@ -15,6 +18,9 @@ kernel:
       android_sparseimg:
         xz:
           http: https://images.postmarketos.org/bpo/edge/xiaomi-beryllium/phosh/20260315-1534/20260315-1534-postmarketOS-edge-phosh-27-xiaomi-beryllium-tianma.img.xz
+          content:
+            digest: sha512:a3037ec9889eb96f73c269b20df1d4c12f29f5a1b1e5305eb90f25bfa0c33d0f7bfb67bb7d966a536e7b0259bdff149b778c13b40f4cea564a78d817a03bc771
+            size_bytes: 891173060
 dtbs:
   path: /dtbs
   fat:
@@ -23,6 +29,9 @@ dtbs:
       android_sparseimg:
         xz:
           http: https://images.postmarketos.org/bpo/edge/xiaomi-beryllium/phosh/20260315-1534/20260315-1534-postmarketOS-edge-phosh-27-xiaomi-beryllium-tianma.img.xz
+          content:
+            digest: sha512:a3037ec9889eb96f73c269b20df1d4c12f29f5a1b1e5305eb90f25bfa0c33d0f7bfb67bb7d966a536e7b0259bdff149b778c13b40f4cea564a78d817a03bc771
+            size_bytes: 891173060
 stage0:
   devices:
     xiaomi-beryllium-ebbg: {}

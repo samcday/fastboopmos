@@ -7,6 +7,9 @@ rootfs:
       android_sparseimg:
         xz:
           http: https://images.postmarketos.org/bpo/edge/oneplus-enchilada/sxmo-de-sway/20260315-0520/20260315-0520-postmarketOS-edge-sxmo-de-sway-1.18.0-oneplus-enchilada.img.xz
+          content:
+            digest: sha512:ad1d0269c914174647c9c01fca2bfce365c3c9d60f7ed46b77485754c48966027dae961a9e99e5190f5134ac33b9d260db8539bf3084a1400fd3619ad44bf8fa
+            size_bytes: 654767744
 kernel:
   path: /vmlinuz
   fat:
@@ -15,6 +18,9 @@ kernel:
       android_sparseimg:
         xz:
           http: https://images.postmarketos.org/bpo/edge/oneplus-enchilada/sxmo-de-sway/20260315-0520/20260315-0520-postmarketOS-edge-sxmo-de-sway-1.18.0-oneplus-enchilada.img.xz
+          content:
+            digest: sha512:ad1d0269c914174647c9c01fca2bfce365c3c9d60f7ed46b77485754c48966027dae961a9e99e5190f5134ac33b9d260db8539bf3084a1400fd3619ad44bf8fa
+            size_bytes: 654767744
 dtbs:
   path: /dtbs
   fat:
@@ -23,6 +29,9 @@ dtbs:
       android_sparseimg:
         xz:
           http: https://images.postmarketos.org/bpo/edge/oneplus-enchilada/sxmo-de-sway/20260315-0520/20260315-0520-postmarketOS-edge-sxmo-de-sway-1.18.0-oneplus-enchilada.img.xz
+          content:
+            digest: sha512:ad1d0269c914174647c9c01fca2bfce365c3c9d60f7ed46b77485754c48966027dae961a9e99e5190f5134ac33b9d260db8539bf3084a1400fd3619ad44bf8fa
+            size_bytes: 654767744
 stage0:
   devices:
     oneplus-enchilada: {}

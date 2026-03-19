@@ -7,6 +7,9 @@ rootfs:
       android_sparseimg:
         xz:
           http: https://images.postmarketos.org/bpo/edge/xiaomi-beryllium/plasma-mobile/20260315-1542/20260315-1542-postmarketOS-edge-plasma-mobile-6-xiaomi-beryllium-ebbg.img.xz
+          content:
+            digest: sha512:f97053629a94f15727a857a392c6c3c8b2a7e02e58a9abd615c70914a25adb851b88c26b5e00475c8177e8297abcf1fb86ea8ce5ccb2407b4693c2420e91cdc7
+            size_bytes: 1180060160
 kernel:
   path: /vmlinuz
   fat:
@@ -15,6 +18,9 @@ kernel:
       android_sparseimg:
         xz:
           http: https://images.postmarketos.org/bpo/edge/xiaomi-beryllium/plasma-mobile/20260315-1542/20260315-1542-postmarketOS-edge-plasma-mobile-6-xiaomi-beryllium-ebbg.img.xz
+          content:
+            digest: sha512:f97053629a94f15727a857a392c6c3c8b2a7e02e58a9abd615c70914a25adb851b88c26b5e00475c8177e8297abcf1fb86ea8ce5ccb2407b4693c2420e91cdc7
+            size_bytes: 1180060160
 dtbs:
   path: /dtbs
   fat:
@@ -23,6 +29,9 @@ dtbs:
       android_sparseimg:
         xz:
           http: https://images.postmarketos.org/bpo/edge/xiaomi-beryllium/plasma-mobile/20260315-1542/20260315-1542-postmarketOS-edge-plasma-mobile-6-xiaomi-beryllium-ebbg.img.xz
+          content:
+            digest: sha512:f97053629a94f15727a857a392c6c3c8b2a7e02e58a9abd615c70914a25adb851b88c26b5e00475c8177e8297abcf1fb86ea8ce5ccb2407b4693c2420e91cdc7
+            size_bytes: 1180060160
 stage0:
   devices:
     xiaomi-beryllium-ebbg: {}

@@ -7,6 +7,9 @@ rootfs:
       android_sparseimg:
         xz:
           http: https://images.postmarketos.org/bpo/edge/xiaomi-beryllium/sxmo-de-sway/20260315-1522/20260315-1522-postmarketOS-edge-sxmo-de-sway-1.18.0-xiaomi-beryllium-tianma.img.xz
+          content:
+            digest: sha512:496e1a6622f68e616b55e30b241c4ea27b58b60cfc3df87a6df6bc083410c5efface6ddbda47de8547138d338e09e63b88ab161102a20e00845230388d26c265
+            size_bytes: 658836960
 kernel:
   path: /vmlinuz
   fat:
@@ -15,6 +18,9 @@ kernel:
       android_sparseimg:
         xz:
           http: https://images.postmarketos.org/bpo/edge/xiaomi-beryllium/sxmo-de-sway/20260315-1522/20260315-1522-postmarketOS-edge-sxmo-de-sway-1.18.0-xiaomi-beryllium-tianma.img.xz
+          content:
+            digest: sha512:496e1a6622f68e616b55e30b241c4ea27b58b60cfc3df87a6df6bc083410c5efface6ddbda47de8547138d338e09e63b88ab161102a20e00845230388d26c265
+            size_bytes: 658836960
 dtbs:
   path: /dtbs
   fat:
@@ -23,6 +29,9 @@ dtbs:
       android_sparseimg:
         xz:
           http: https://images.postmarketos.org/bpo/edge/xiaomi-beryllium/sxmo-de-sway/20260315-1522/20260315-1522-postmarketOS-edge-sxmo-de-sway-1.18.0-xiaomi-beryllium-tianma.img.xz
+          content:
+            digest: sha512:496e1a6622f68e616b55e30b241c4ea27b58b60cfc3df87a6df6bc083410c5efface6ddbda47de8547138d338e09e63b88ab161102a20e00845230388d26c265
+            size_bytes: 658836960
 stage0:
   devices:
     xiaomi-beryllium-ebbg: {}
