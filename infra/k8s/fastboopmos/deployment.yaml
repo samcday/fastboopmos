@@ -4,6 +4,8 @@ metadata:
   name: fastboopmos
 spec:
   replicas: 2
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       app: fastboopmos
