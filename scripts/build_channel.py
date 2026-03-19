@@ -25,7 +25,7 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--output",
-        default="build/channel/edge.bootchannel",
+        default="build/channel/edge.channel",
         help="Output channel path",
     )
     parser.add_argument(

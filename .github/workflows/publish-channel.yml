@@ -1,6 +1,8 @@
 name: Publish Channel
 
 on:
+  pull_request:
+    branches: [main]
   push:
     branches: [main]
   workflow_dispatch:
@@ -9,7 +11,7 @@ permissions:
   contents: write
 
 jobs:
-  publish:
+  build-channel:
     runs-on: ubuntu-latest
     env:
       FASTBOOP_VERSION: 0.0.1-rc.9
@@ -64,17 +66,36 @@ jobs:
             --fastboop ./bin/fastboop \
             --manifests-dir bootprofiles \
             --compiled-dir build/bootprofiles \
-            --output dist/edge.bootchannel
+            --output dist/edge.channel
 
       - name: Write channel metadata
         run: |
           mkdir -p dist
-          cp -R bootprofiles dist/bootprofiles
-          sha256sum dist/edge.bootchannel | awk '{print $1}' > dist/edge.bootchannel.sha256
+          sha256sum dist/edge.channel | awk '{print $1}' > dist/edge.channel.sha256
 
-      - name: Publish to gh-pages
-        uses: peaceiris/actions-gh-pages@v4
+      - name: Upload workflow artifact
+        uses: actions/upload-artifact@v4
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./dist
-          publish_branch: gh-pages
+          name: edge-channel
+          if-no-files-found: error
+          path: |
+            dist/edge.channel
+            dist/edge.channel.sha256
+
+      - name: Generate edge release tag
+        if: github.event_name == 'push'
+        id: tag
+        run: |
+          set -euo pipefail
+          tag="edge-$(date -u +%Y%m%d%H%M%S)"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+
+      - name: Publish edge release
+        if: github.event_name == 'push'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.tag.outputs.tag }}
+          name: ${{ steps.tag.outputs.tag }}
+          files: |
+            dist/edge.channel
+            dist/edge.channel.sha256

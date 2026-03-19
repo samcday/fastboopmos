@@ -18,5 +18,18 @@ data:
       tls /certs/tls.crt /certs/tls.key
 
       respond /healthz "ok" 200
-      respond "fastboopmos frontdoor placeholder" 200
+
+      @gha path /gha /gha/*
+      handle @gha {
+        reverse_proxy fastboopmos-gha-proxy:80
+      }
+
+      @edge path /edge.channel /edge.channel.sha256 /__fastboopmos/live
+      handle @edge {
+        reverse_proxy fastboopmos-release:80
+      }
+
+      handle {
+        respond "not found" 404
+      }
     }

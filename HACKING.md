@@ -36,6 +36,7 @@ python scripts/build_channel.py --fastboop /path/to/fastboop
   - refreshes `bootprofiles/`
   - opens one PR per changed `bootprofiles/<device>/` subtree
 - `.github/workflows/publish-channel.yml`
-  - runs on `main`
-  - compiles all manifests into `edge.bootchannel`
-  - publishes channel artifacts to `gh-pages`
+  - runs on pull requests and on `main`
+  - compiles all manifests into `edge.channel`
+  - uploads workflow artifacts for CI/debugging
+  - on `main`, creates `edge-YYYYMMDDhhmmss` release tags and attaches channel assets

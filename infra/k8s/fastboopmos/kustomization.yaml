@@ -6,5 +6,35 @@ resources:
   - caddy-config.yaml
   - gateway.yaml
   - deployment.yaml
+  - gha-proxy-deployment.yaml
+  - gha-proxy-service.yaml
+  - release-deployment.yaml
+  - release-service.yaml
   - httproute.yaml
   - service.yaml
+configMapGenerator:
+  - name: fastboopmos-gha-proxy-config
+    literals:
+      - PORT=8080
+      - CACHE_DIR=/cache
+      - CACHE_MAX_BYTES=8589934592
+      - REQUEST_TIMEOUT_SECONDS=300
+      - GITHUB_OWNER=samcday
+      - GITHUB_REPO=fastboopmos
+  - name: fastboopmos-gha-proxy-script
+    files:
+      - gha_proxy.py=gha_proxy.py
+  - name: fastboopmos-release-config
+    literals:
+      - PORT=8080
+      - CACHE_DIR=/cache
+      - REQUEST_TIMEOUT_SECONDS=300
+      - GITHUB_OWNER=samcday
+      - GITHUB_REPO=fastboopmos
+      - TAG_PREFIX=edge-
+      - ASSET_NAME=edge.channel
+      - SHA256_ASSET_NAME=edge.channel.sha256
+      - TAG_CACHE_SECONDS=60
+  - name: fastboopmos-release-script
+    files:
+      - channel_release_app.py=channel_release_app.py

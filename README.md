@@ -2,7 +2,7 @@
 
 A set of [BootProfiles][] to enable live-booting official postmarketOS artifacts with [fastboop][].
 
-Want to live boot pmOS on your device right now? Click here: https://www.fastboop.win/?channel=https://samcday.github.io/fastboopmos/edge.bootchannel
+Want to live boot pmOS on your device right now? Click here: https://www.fastboop.win/?channel=https://fastboopmos.samcday.com/edge.channel
 
 Wanna peek under the hood? [Cool.](./HACKING.md)
 
