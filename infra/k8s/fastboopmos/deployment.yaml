@@ -42,14 +42,12 @@ spec:
               hostPort: 443
               protocol: TCP
           readinessProbe:
-            httpGet:
-              path: /healthz
+            tcpSocket:
               port: http
             initialDelaySeconds: 3
             periodSeconds: 10
           livenessProbe:
-            httpGet:
-              path: /healthz
+            tcpSocket:
               port: http
             initialDelaySeconds: 10
             periodSeconds: 20
