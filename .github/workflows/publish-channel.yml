@@ -12,7 +12,7 @@ jobs:
   publish:
     runs-on: ubuntu-latest
     env:
-      FASTBOOP_VERSION: 0.0.1-rc.8
+      FASTBOOP_VERSION: 0.0.1-rc.9
     steps:
       - name: Checkout fastboopmos
         uses: actions/checkout@v4
