@@ -94,6 +94,8 @@ def render_manifest(
     profile_id: str,
     display_name: str,
     image_url: str,
+    image_sha512: str,
+    image_size: int,
     device_profiles: list[str],
 ) -> str:
     lines = [
@@ -106,6 +108,9 @@ def render_manifest(
         "      android_sparseimg:",
         "        xz:",
         f"          http: {image_url}",
+        "          content:",
+        f"            digest: sha512:{image_sha512}",
+        f"            size_bytes: {image_size}",
         "kernel:",
         "  path: /vmlinuz",
         "  fat:",
@@ -114,6 +119,9 @@ def render_manifest(
         "      android_sparseimg:",
         "        xz:",
         f"          http: {image_url}",
+        "          content:",
+        f"            digest: sha512:{image_sha512}",
+        f"            size_bytes: {image_size}",
         "dtbs:",
         "  path: /dtbs",
         "  fat:",
@@ -122,6 +130,9 @@ def render_manifest(
         "      android_sparseimg:",
         "        xz:",
         f"          http: {image_url}",
+        "          content:",
+        f"            digest: sha512:{image_sha512}",
+        f"            size_bytes: {image_size}",
         "stage0:",
         "  devices:",
     ]
@@ -167,6 +178,16 @@ def build_manifests_for_device(
 
         for variant_key, variant_images in grouped.items():
             latest = max(variant_images, key=lambda item: item["timestamp"])
+            sha512 = latest.get("sha512")
+            size = latest.get("size")
+            if not isinstance(sha512, str) or len(sha512) != 128:
+                raise ValueError(
+                    f"image {latest.get('name', '<unknown>')!r} is missing sha512"
+                )
+            if not isinstance(size, int) or size <= 0:
+                raise ValueError(
+                    f"image {latest.get('name', '<unknown>')!r} has invalid size"
+                )
             variant = variant_key or None
             target_name = pmos_device if variant is None else f"{pmos_device}-{variant}"
             profile_id = f"pmos-{release_name}-{ui_name}-{target_name}"
@@ -176,6 +197,8 @@ def build_manifests_for_device(
                 profile_id=profile_id,
                 display_name=display_name,
                 image_url=latest["url"],
+                image_sha512=sha512,
+                image_size=size,
                 device_profiles=device_profiles,
             )
 
