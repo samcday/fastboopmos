@@ -308,6 +308,7 @@ def sync_bootprofiles(
     compile_bootpro: bool,
     fastboop: str,
     artifact_cache_dir: Path,
+    only_device: str | None,
 ) -> None:
     release_name = release.get("name")
     if not isinstance(release_name, str) or not release_name:
@@ -325,12 +326,20 @@ def sync_bootprofiles(
 
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    configured_devices = set(config)
-    for existing_dir in out_dir.iterdir():
-        if existing_dir.is_dir() and existing_dir.name not in configured_devices:
-            shutil.rmtree(existing_dir)
+    if only_device is not None:
+        if only_device not in config:
+            raise ValueError(f"device {only_device!r} is not in the allow-list config")
+        target_devices = [only_device]
+    else:
+        target_devices = sorted(config)
 
-    for pmos_device in sorted(config):
+    if only_device is None:
+        configured_devices = set(config)
+        for existing_dir in out_dir.iterdir():
+            if existing_dir.is_dir() and existing_dir.name not in configured_devices:
+                shutil.rmtree(existing_dir)
+
+    for pmos_device in target_devices:
         device_profiles = config[pmos_device]
         if pmos_device not in release_map:
             raise ValueError(f"allow-listed device {pmos_device!r} not found in release")
@@ -414,6 +423,10 @@ def parse_args() -> argparse.Namespace:
         default="build/pmos-artifacts",
         help="Cache directory for downloaded source artifacts",
     )
+    parser.add_argument(
+        "--only-device",
+        help="Limit sync to one allow-listed postmarketOS device",
+    )
     return parser.parse_args()
 
 
@@ -433,6 +446,7 @@ def main() -> int:
             compile_bootpro=args.compile_bootpro,
             fastboop=args.fastboop,
             artifact_cache_dir=artifact_cache_dir,
+            only_device=args.only_device,
         )
     except Exception as err:
         print(f"error: {err}", file=sys.stderr)
