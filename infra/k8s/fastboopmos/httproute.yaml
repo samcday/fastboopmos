@@ -8,7 +8,8 @@ spec:
   hostnames:
     - fastboopmos.samcday.com
   parentRefs:
-    - name: public
+    - name: shared
+      namespace: kube-system
   rules:
     - matches:
         - path:
