@@ -4,7 +4,6 @@ namespace: fastboopmos
 resources:
   - certificate.yaml
   - caddy-config.yaml
-  - gateway.yaml
   - deployment.yaml
   - gha-proxy-deployment.yaml
   - gha-proxy-service.yaml
