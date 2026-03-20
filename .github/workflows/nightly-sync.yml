@@ -12,6 +12,8 @@ permissions:
 jobs:
   sync:
     runs-on: ubuntu-latest
+    env:
+      FASTBOOP_VERSION: 0.0.1-rc.9
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -28,8 +30,52 @@ jobs:
           python -m pip install --upgrade pip
           pip install pyyaml
 
+      - name: Download fastboop CLI release
+        run: |
+          python - <<'PY'
+          import io
+          import os
+          import stat
+          import tarfile
+          import urllib.request
+          from pathlib import Path
+
+          version = os.environ["FASTBOOP_VERSION"]
+          url = (
+              "https://github.com/samcday/fastboop/releases/download/"
+              f"v{version}/fastboop-cli-x86_64-unknown-linux-musl.tar.gz"
+          )
+
+          data = urllib.request.urlopen(url).read()
+          out_dir = Path("bin")
+          out_dir.mkdir(parents=True, exist_ok=True)
+
+          with tarfile.open(fileobj=io.BytesIO(data), mode="r:gz") as archive:
+              member = next(
+                  (
+                      m
+                      for m in archive.getmembers()
+                      if m.isfile() and Path(m.name).name == "fastboop"
+                  ),
+                  None,
+              )
+              if member is None:
+                  raise RuntimeError("fastboop binary not found in release archive")
+
+              extracted = archive.extractfile(member)
+              if extracted is None:
+                  raise RuntimeError("failed to extract fastboop binary")
+
+              output = out_dir / "fastboop"
+              output.write_bytes(extracted.read())
+              output.chmod(output.stat().st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
+          PY
+
       - name: Generate canonical bootprofile YAMLs
-        run: python scripts/sync_bootprofiles.py
+        run: |
+          python scripts/sync_bootprofiles.py \
+            --compile-bootpro \
+            --fastboop ./bin/fastboop
 
       - name: Configure git author
         run: |

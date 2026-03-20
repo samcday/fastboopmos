@@ -22,6 +22,16 @@ CHUNK_SIZE = 1024 * 1024
 PER_PAGE = 100
 USER_AGENT = "fastboopmos-release-app/0.1"
 
+ALLOWED_ORIGIN_EXACT = {
+    "https://www.fastboop.win",
+    "https://bleeding.fastboop.win",
+}
+ALLOWED_LOCALHOST_HOSTS = {"localhost", "127.0.0.1"}
+
+
+class RangeNotSatisfiableError(Exception):
+    pass
+
 
 def env_int(name: str, default: int) -> int:
     raw = os.environ.get(name, "").strip()
@@ -220,12 +230,82 @@ def content_type_for(path: Path) -> str:
     return "application/octet-stream"
 
 
+def is_allowed_origin(origin: str) -> bool:
+    if origin in ALLOWED_ORIGIN_EXACT:
+        return True
+
+    parsed = urllib.parse.urlsplit(origin)
+    if parsed.scheme not in {"http", "https"}:
+        return False
+    if parsed.hostname not in ALLOWED_LOCALHOST_HOSTS:
+        return False
+    return True
+
+
+def parse_single_byte_range(range_header: str, size: int) -> tuple[int, int]:
+    if not range_header.startswith("bytes="):
+        raise RangeNotSatisfiableError("unsupported range unit")
+    spec = range_header[len("bytes=") :].strip()
+    if not spec or "," in spec:
+        raise RangeNotSatisfiableError("multiple ranges are not supported")
+    if "-" not in spec:
+        raise RangeNotSatisfiableError("invalid range syntax")
+
+    start_raw, end_raw = spec.split("-", 1)
+    start_raw = start_raw.strip()
+    end_raw = end_raw.strip()
+
+    if not start_raw:
+        if not end_raw:
+            raise RangeNotSatisfiableError("invalid suffix range")
+        try:
+            suffix_len = int(end_raw)
+        except ValueError as exc:
+            raise RangeNotSatisfiableError("invalid suffix range") from exc
+        if suffix_len <= 0:
+            raise RangeNotSatisfiableError("invalid suffix length")
+        if suffix_len >= size:
+            return 0, size - 1
+        return size - suffix_len, size - 1
+
+    try:
+        start = int(start_raw)
+    except ValueError as exc:
+        raise RangeNotSatisfiableError("invalid range start") from exc
+    if start < 0 or start >= size:
+        raise RangeNotSatisfiableError("range start out of bounds")
+
+    if not end_raw:
+        return start, size - 1
+
+    try:
+        end = int(end_raw)
+    except ValueError as exc:
+        raise RangeNotSatisfiableError("invalid range end") from exc
+    if end < start:
+        raise RangeNotSatisfiableError("range end before start")
+    if end >= size:
+        end = size - 1
+    return start, end
+
+
 class ReleaseHandler(BaseHTTPRequestHandler):
     protocol_version = "HTTP/1.1"
     server_version = "fastboopmos-release-app/0.1"
 
     def do_HEAD(self) -> None:
         self.handle_request(head_only=True)
+
+    def do_OPTIONS(self) -> None:
+        path = urllib.parse.urlsplit(self.path).path
+        if path in {"/edge.channel", "/edge.channel.sha256", "/__fastboopmos/live"}:
+            self.send_response(204)
+            self.write_cors_headers()
+            self.send_header("access-control-max-age", "86400")
+            self.send_header("content-length", "0")
+            self.end_headers()
+            return
+        self.send_text(404, "not found\n", head_only=True)
 
     def do_GET(self) -> None:
         self.handle_request(head_only=False)
@@ -264,10 +344,34 @@ class ReleaseHandler(BaseHTTPRequestHandler):
             self.send_text(404, "not found\n", head_only=head_only)
             return
 
-        self.send_response(200)
+        range_header = self.headers.get("range")
+        start = 0
+        end = size - 1
+        status = 200
+        if range_header:
+            try:
+                start, end = parse_single_byte_range(range_header, size)
+                status = 206
+            except RangeNotSatisfiableError:
+                self.send_response(416)
+                self.write_cors_headers()
+                self.send_header("cache-control", "no-store")
+                self.send_header("accept-ranges", "bytes")
+                self.send_header("content-range", f"bytes */{size}")
+                self.send_header("content-length", "0")
+                self.end_headers()
+                return
+
+        length = end - start + 1
+
+        self.send_response(status)
+        self.write_cors_headers()
         self.send_header("cache-control", "no-store")
+        self.send_header("accept-ranges", "bytes")
         self.send_header("content-type", content_type_for(asset))
-        self.send_header("content-length", str(size))
+        self.send_header("content-length", str(length))
+        if status == 206:
+            self.send_header("content-range", f"bytes {start}-{end}/{size}")
         self.end_headers()
 
         if head_only:
@@ -275,19 +379,42 @@ class ReleaseHandler(BaseHTTPRequestHandler):
 
         try:
             with asset.open("rb") as source:
-                shutil.copyfileobj(source, self.wfile, CHUNK_SIZE)
+                if start:
+                    source.seek(start)
+                remaining = length
+                while remaining > 0:
+                    chunk = source.read(min(CHUNK_SIZE, remaining))
+                    if not chunk:
+                        break
+                    self.wfile.write(chunk)
+                    remaining -= len(chunk)
         except BrokenPipeError:
             return
 
     def send_text(self, status: int, body: str, *, head_only: bool) -> None:
         encoded = body.encode("utf-8")
         self.send_response(status)
+        self.write_cors_headers()
         self.send_header("cache-control", "no-store")
         self.send_header("content-type", "text/plain; charset=utf-8")
         self.send_header("content-length", str(len(encoded)))
         self.end_headers()
         if not head_only:
             self.wfile.write(encoded)
+
+    def write_cors_headers(self) -> None:
+        origin = self.headers.get("origin", "").strip()
+        if not origin or not is_allowed_origin(origin):
+            return
+
+        self.send_header("access-control-allow-origin", origin)
+        self.send_header("vary", "Origin")
+        self.send_header("access-control-allow-methods", "GET, HEAD, OPTIONS")
+        self.send_header("access-control-allow-headers", "Content-Type, Range")
+        self.send_header(
+            "access-control-expose-headers",
+            "Content-Length, Content-Range, ETag, Accept-Ranges",
+        )
 
 
 def main() -> None:

@@ -13,7 +13,8 @@ oneplus-fajita:
 ```
 
 The nightly sync job resolves all available UI variants per allow-listed device from
-`https://images.postmarketos.org/bpo/index.json` and writes manifests under `bootprofiles/`.
+`https://images.postmarketos.org/bpo/index.json`, writes manifests under `bootprofiles/`, and
+compiles optimized `.bootpro` binaries beside each YAML.
 
 ## Local workflow
 
@@ -23,20 +24,27 @@ Generate canonical manifests:
 python scripts/sync_bootprofiles.py
 ```
 
-Build a compiled channel (concatenated `.bootpro` stream):
+Generate manifests and compiled optimized `.bootpro` artifacts:
 
 ```bash
-python scripts/build_channel.py --fastboop /path/to/fastboop
+python scripts/sync_bootprofiles.py --compile-bootpro --fastboop /path/to/fastboop
+```
+
+Build a channel from committed `.bootpro` files (concatenated stream):
+
+```bash
+python scripts/build_channel.py
 ```
 
 ## Automation
 
 - `.github/workflows/nightly-sync.yml`
   - runs nightly
-  - refreshes `bootprofiles/`
+  - refreshes `bootprofiles/*.yaml`
+  - compiles optimized `bootprofiles/*.bootpro`
   - opens one PR per changed `bootprofiles/<device>/` subtree
 - `.github/workflows/publish-channel.yml`
   - runs on pull requests and on `main`
-  - compiles all manifests into `edge.channel`
+  - concatenates committed `.bootpro` artifacts into `edge.channel`
   - uploads workflow artifacts for CI/debugging
   - on `main`, creates `edge-YYYYMMDDhhmmss` release tags and attaches channel assets

@@ -3,14 +3,32 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
+import os
 import shutil
+import subprocess
 import sys
 import urllib.request
 from collections.abc import Mapping, Sequence
 from pathlib import Path
+from urllib.parse import urlparse
 
 import yaml
+
+
+class ManifestBuild:
+    def __init__(
+        self,
+        content: str,
+        image_url: str,
+        image_sha512: str,
+        image_size: int,
+    ) -> None:
+        self.content = content
+        self.image_url = image_url
+        self.image_sha512 = image_sha512
+        self.image_size = image_size
 
 
 def load_config(path: Path) -> dict[str, list[str]]:
@@ -146,8 +164,8 @@ def build_manifests_for_device(
     device_entry: Mapping[str, object],
     pmos_device: str,
     device_profiles: list[str],
-) -> dict[str, str]:
-    manifests: dict[str, str] = {}
+) -> dict[str, ManifestBuild]:
+    manifests: dict[str, ManifestBuild] = {}
 
     interfaces = device_entry.get("interfaces")
     if not isinstance(interfaces, list):
@@ -193,19 +211,104 @@ def build_manifests_for_device(
             profile_id = f"pmos-{release_name}-{ui_name}-{target_name}"
             display_name = f"postmarketOS {release_name} {ui_name} {target_name}"
             file_stem = ui_name if variant is None else f"{ui_name}-{variant}"
-            manifests[f"{file_stem}.yaml"] = render_manifest(
-                profile_id=profile_id,
-                display_name=display_name,
+            manifests[f"{file_stem}.yaml"] = ManifestBuild(
+                content=render_manifest(
+                    profile_id=profile_id,
+                    display_name=display_name,
+                    image_url=latest["url"],
+                    image_sha512=sha512,
+                    image_size=size,
+                    device_profiles=device_profiles,
+                ),
                 image_url=latest["url"],
                 image_sha512=sha512,
                 image_size=size,
-                device_profiles=device_profiles,
             )
 
     return manifests
 
 
-def sync_bootprofiles(config: dict[str, list[str]], release: dict, out_dir: Path) -> None:
+def ensure_artifact_cached(
+    image_url: str,
+    image_sha512: str,
+    image_size: int,
+    cache_dir: Path,
+) -> Path:
+    parsed = urlparse(image_url)
+    suffix = "".join(Path(parsed.path).suffixes)
+    filename = image_sha512 if not suffix else f"{image_sha512}{suffix}"
+    output_path = cache_dir / filename
+
+    if output_path.exists():
+        if output_path.stat().st_size == image_size:
+            hasher = hashlib.sha512()
+            with output_path.open("rb") as existing:
+                while True:
+                    chunk = existing.read(1024 * 1024)
+                    if not chunk:
+                        break
+                    hasher.update(chunk)
+            if hasher.hexdigest() == image_sha512:
+                return output_path
+        output_path.unlink()
+
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    temp_path = output_path.with_suffix(output_path.suffix + ".tmp")
+    hasher = hashlib.sha512()
+    size = 0
+
+    with urllib.request.urlopen(image_url) as response, temp_path.open("wb") as out:
+        while True:
+            chunk = response.read(1024 * 1024)
+            if not chunk:
+                break
+            out.write(chunk)
+            hasher.update(chunk)
+            size += len(chunk)
+
+    if size != image_size:
+        temp_path.unlink(missing_ok=True)
+        raise ValueError(
+            f"downloaded artifact size mismatch for {image_url}: expected {image_size}, got {size}"
+        )
+    if hasher.hexdigest() != image_sha512:
+        temp_path.unlink(missing_ok=True)
+        raise ValueError(f"downloaded artifact digest mismatch for {image_url}")
+
+    os.replace(temp_path, output_path)
+    return output_path
+
+
+def compile_manifest(
+    fastboop: str,
+    manifest_path: Path,
+    output_path: Path,
+    local_artifact: Path,
+) -> None:
+    subprocess.run(
+        [
+            fastboop,
+            "bootprofile",
+            "create",
+            str(manifest_path),
+            "-o",
+            str(output_path),
+            "--optimize",
+            "--local-artifact",
+            str(local_artifact),
+        ],
+        check=True,
+    )
+
+
+def sync_bootprofiles(
+    config: dict[str, list[str]],
+    release: dict,
+    out_dir: Path,
+    compile_bootpro: bool,
+    fastboop: str,
+    artifact_cache_dir: Path,
+) -> None:
     release_name = release.get("name")
     if not isinstance(release_name, str) or not release_name:
         raise ValueError("release is missing a name")
@@ -245,14 +348,31 @@ def sync_bootprofiles(config: dict[str, list[str]], release: dict, out_dir: Path
         device_dir.mkdir(parents=True, exist_ok=True)
 
         expected_paths = set()
-        for filename, content in sorted(manifests.items()):
+        expected_bootpro_paths = set()
+        for filename, manifest in sorted(manifests.items()):
             file_path = device_dir / filename
-            file_path.write_text(content, encoding="utf-8")
+            file_path.write_text(manifest.content, encoding="utf-8")
             expected_paths.add(file_path)
+
+            if compile_bootpro:
+                local_artifact = ensure_artifact_cached(
+                    image_url=manifest.image_url,
+                    image_sha512=manifest.image_sha512,
+                    image_size=manifest.image_size,
+                    cache_dir=artifact_cache_dir,
+                )
+                bootpro_path = file_path.with_suffix(".bootpro")
+                compile_manifest(fastboop, file_path, bootpro_path, local_artifact)
+                expected_bootpro_paths.add(bootpro_path)
 
         for existing_file in device_dir.glob("*.yaml"):
             if existing_file not in expected_paths:
                 existing_file.unlink()
+
+        if compile_bootpro:
+            for existing_file in device_dir.glob("*.bootpro"):
+                if existing_file not in expected_bootpro_paths:
+                    existing_file.unlink()
 
 
 def parse_args() -> argparse.Namespace:
@@ -279,6 +399,21 @@ def parse_args() -> argparse.Namespace:
         default="edge",
         help="postmarketOS release name",
     )
+    parser.add_argument(
+        "--compile-bootpro",
+        action="store_true",
+        help="Compile each generated manifest to optimized .bootpro",
+    )
+    parser.add_argument(
+        "--fastboop",
+        default="fastboop",
+        help="Path to fastboop CLI binary",
+    )
+    parser.add_argument(
+        "--artifact-cache-dir",
+        default="build/pmos-artifacts",
+        help="Cache directory for downloaded source artifacts",
+    )
     return parser.parse_args()
 
 
@@ -286,11 +421,19 @@ def main() -> int:
     args = parse_args()
     config_path = Path(args.config)
     out_dir = Path(args.output_dir)
+    artifact_cache_dir = Path(args.artifact_cache_dir)
 
     try:
         config = load_config(config_path)
         release = fetch_release(args.index_url, args.release)
-        sync_bootprofiles(config, release, out_dir)
+        sync_bootprofiles(
+            config,
+            release,
+            out_dir,
+            compile_bootpro=args.compile_bootpro,
+            fastboop=args.fastboop,
+            artifact_cache_dir=artifact_cache_dir,
+        )
     except Exception as err:
         print(f"error: {err}", file=sys.stderr)
         return 1

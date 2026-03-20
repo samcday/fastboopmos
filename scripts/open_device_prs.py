@@ -111,6 +111,7 @@ def main() -> int:
                     "## Summary",
                     f"- Refresh canonical BootProfile manifests for `{device}` from postmarketOS edge.",
                     "- Includes all available UIs for this device using latest rootfs images from index.json.",
+                    "- Commits optimized `.bootpro` binaries alongside YAML manifests.",
                 ]
             )
             run(
