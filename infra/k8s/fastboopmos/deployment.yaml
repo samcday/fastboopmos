@@ -19,8 +19,6 @@ spec:
       annotations:
         fastboopmos.samcday.com/caddy-config-rev: "20260319-1"
     spec:
-      hostNetwork: true
-      dnsPolicy: ClusterFirstWithHostNet
       containers:
         - name: caddy
           image: docker.io/caddy:2.10.2
@@ -35,11 +33,6 @@ spec:
           ports:
             - name: http
               containerPort: 80
-              hostPort: 80
-              protocol: TCP
-            - name: https
-              containerPort: 443
-              hostPort: 443
               protocol: TCP
           readinessProbe:
             tcpSocket:
@@ -62,13 +55,7 @@ spec:
             - name: config
               mountPath: /etc/caddy/Caddyfile
               subPath: Caddyfile
-            - name: tls
-              mountPath: /certs
-              readOnly: true
       volumes:
         - name: config
           configMap:
             name: fastboopmos-caddy
-        - name: tls
-          secret:
-            secretName: fastboopmos-public-tls
