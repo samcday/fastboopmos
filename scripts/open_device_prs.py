@@ -143,6 +143,17 @@ def main() -> int:
         else:
             snapshot_root.mkdir(parents=True, exist_ok=True)
 
+        run(
+            "git",
+            "restore",
+            "--source=HEAD",
+            "--staged",
+            "--worktree",
+            "--",
+            args.bootprofiles_dir,
+        )
+        run("git", "clean", "-fd", "--", args.bootprofiles_dir)
+
         try:
             for device in devices:
                 branch = f"{args.branch_prefix}-{device}"
