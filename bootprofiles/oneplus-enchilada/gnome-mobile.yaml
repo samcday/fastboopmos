@@ -6,10 +6,10 @@ rootfs:
       index: 1
       android_sparseimg:
         xz:
-          http: https://images.postmarketos.org/bpo/edge/oneplus-enchilada/gnome-mobile/20260315-0522/20260315-0522-postmarketOS-edge-gnome-mobile-4-oneplus-enchilada.img.xz
+          http: https://images.postmarketos.org/bpo/edge/oneplus-enchilada/gnome-mobile/20260320-1121/20260320-1121-postmarketOS-edge-gnome-mobile-4-oneplus-enchilada.img.xz
           content:
-            digest: sha512:55024af6e56485a0e268368e4550a4ba60b05c9b81a330edcbf6988a31790fdb69b735e7ad7328fba1157f63958642f0689f242048d94f5dcd007b0f766ecff6
-            size_bytes: 899225240
+            digest: sha512:3968c26969e6001eb698a89168314db69bf3b2aec4c0648a78d7fe19fdf4530b6f81e89dc3425653605a474fe25e15e234d84f8a4ee49ff3500e2f5c1c9f2b4c
+            size_bytes: 918470896
 kernel:
   path: /vmlinuz
   fat:
@@ -17,10 +17,10 @@ kernel:
       index: 0
       android_sparseimg:
         xz:
-          http: https://images.postmarketos.org/bpo/edge/oneplus-enchilada/gnome-mobile/20260315-0522/20260315-0522-postmarketOS-edge-gnome-mobile-4-oneplus-enchilada.img.xz
+          http: https://images.postmarketos.org/bpo/edge/oneplus-enchilada/gnome-mobile/20260320-1121/20260320-1121-postmarketOS-edge-gnome-mobile-4-oneplus-enchilada.img.xz
           content:
-            digest: sha512:55024af6e56485a0e268368e4550a4ba60b05c9b81a330edcbf6988a31790fdb69b735e7ad7328fba1157f63958642f0689f242048d94f5dcd007b0f766ecff6
-            size_bytes: 899225240
+            digest: sha512:3968c26969e6001eb698a89168314db69bf3b2aec4c0648a78d7fe19fdf4530b6f81e89dc3425653605a474fe25e15e234d84f8a4ee49ff3500e2f5c1c9f2b4c
+            size_bytes: 918470896
 dtbs:
   path: /dtbs
   fat:
@@ -28,10 +28,10 @@ dtbs:
       index: 0
       android_sparseimg:
         xz:
-          http: https://images.postmarketos.org/bpo/edge/oneplus-enchilada/gnome-mobile/20260315-0522/20260315-0522-postmarketOS-edge-gnome-mobile-4-oneplus-enchilada.img.xz
+          http: https://images.postmarketos.org/bpo/edge/oneplus-enchilada/gnome-mobile/20260320-1121/20260320-1121-postmarketOS-edge-gnome-mobile-4-oneplus-enchilada.img.xz
           content:
-            digest: sha512:55024af6e56485a0e268368e4550a4ba60b05c9b81a330edcbf6988a31790fdb69b735e7ad7328fba1157f63958642f0689f242048d94f5dcd007b0f766ecff6
-            size_bytes: 899225240
+            digest: sha512:3968c26969e6001eb698a89168314db69bf3b2aec4c0648a78d7fe19fdf4530b6f81e89dc3425653605a474fe25e15e234d84f8a4ee49ff3500e2f5c1c9f2b4c
+            size_bytes: 918470896
 stage0:
   devices:
     oneplus-enchilada: {}

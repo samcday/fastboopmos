@@ -6,10 +6,10 @@ rootfs:
       index: 1
       android_sparseimg:
         xz:
-          http: https://images.postmarketos.org/bpo/edge/oneplus-enchilada/plasma-mobile/20260315-0530/20260315-0530-postmarketOS-edge-plasma-mobile-6-oneplus-enchilada.img.xz
+          http: https://images.postmarketos.org/bpo/edge/oneplus-enchilada/plasma-mobile/20260320-1117/20260320-1117-postmarketOS-edge-plasma-mobile-6-oneplus-enchilada.img.xz
           content:
-            digest: sha512:757f6ece73cbab123c8dfd5755d9fbe09b9515a566d341d3bc14bb304d01cdaa1363615fe7f3ccb50799333a186b36e76a12a0121bb57b603da282fdb92ad146
-            size_bytes: 1176196444
+            digest: sha512:001413c24545d174aaad790967bde94a96ee2c9cd0a6e2fbfbeff01c71fb75a7ec6450224130d019ed9853b0ff2f0d01be18bb8528a88bc6038527f6beaeaf0b
+            size_bytes: 1177202536
 kernel:
   path: /vmlinuz
   fat:
@@ -17,10 +17,10 @@ kernel:
       index: 0
       android_sparseimg:
         xz:
-          http: https://images.postmarketos.org/bpo/edge/oneplus-enchilada/plasma-mobile/20260315-0530/20260315-0530-postmarketOS-edge-plasma-mobile-6-oneplus-enchilada.img.xz
+          http: https://images.postmarketos.org/bpo/edge/oneplus-enchilada/plasma-mobile/20260320-1117/20260320-1117-postmarketOS-edge-plasma-mobile-6-oneplus-enchilada.img.xz
           content:
-            digest: sha512:757f6ece73cbab123c8dfd5755d9fbe09b9515a566d341d3bc14bb304d01cdaa1363615fe7f3ccb50799333a186b36e76a12a0121bb57b603da282fdb92ad146
-            size_bytes: 1176196444
+            digest: sha512:001413c24545d174aaad790967bde94a96ee2c9cd0a6e2fbfbeff01c71fb75a7ec6450224130d019ed9853b0ff2f0d01be18bb8528a88bc6038527f6beaeaf0b
+            size_bytes: 1177202536
 dtbs:
   path: /dtbs
   fat:
@@ -28,10 +28,10 @@ dtbs:
       index: 0
       android_sparseimg:
         xz:
-          http: https://images.postmarketos.org/bpo/edge/oneplus-enchilada/plasma-mobile/20260315-0530/20260315-0530-postmarketOS-edge-plasma-mobile-6-oneplus-enchilada.img.xz
+          http: https://images.postmarketos.org/bpo/edge/oneplus-enchilada/plasma-mobile/20260320-1117/20260320-1117-postmarketOS-edge-plasma-mobile-6-oneplus-enchilada.img.xz
           content:
-            digest: sha512:757f6ece73cbab123c8dfd5755d9fbe09b9515a566d341d3bc14bb304d01cdaa1363615fe7f3ccb50799333a186b36e76a12a0121bb57b603da282fdb92ad146
-            size_bytes: 1176196444
+            digest: sha512:001413c24545d174aaad790967bde94a96ee2c9cd0a6e2fbfbeff01c71fb75a7ec6450224130d019ed9853b0ff2f0d01be18bb8528a88bc6038527f6beaeaf0b
+            size_bytes: 1177202536
 stage0:
   devices:
     oneplus-enchilada: {}
