@@ -360,19 +360,26 @@ def sync_bootprofiles(
         expected_bootpro_paths = set()
         for filename, manifest in sorted(manifests.items()):
             file_path = device_dir / filename
-            file_path.write_text(manifest.content, encoding="utf-8")
+            existing_manifest_content = (
+                file_path.read_text(encoding="utf-8") if file_path.exists() else None
+            )
+            manifest_changed = existing_manifest_content != manifest.content
+            if manifest_changed:
+                file_path.write_text(manifest.content, encoding="utf-8")
             expected_paths.add(file_path)
 
             if compile_bootpro:
-                local_artifact = ensure_artifact_cached(
-                    image_url=manifest.image_url,
-                    image_sha512=manifest.image_sha512,
-                    image_size=manifest.image_size,
-                    cache_dir=artifact_cache_dir,
-                )
                 bootpro_path = file_path.with_suffix(".bootpro")
-                compile_manifest(fastboop, file_path, bootpro_path, local_artifact)
                 expected_bootpro_paths.add(bootpro_path)
+                should_compile = manifest_changed or not bootpro_path.exists()
+                if should_compile:
+                    local_artifact = ensure_artifact_cached(
+                        image_url=manifest.image_url,
+                        image_sha512=manifest.image_sha512,
+                        image_size=manifest.image_size,
+                        cache_dir=artifact_cache_dir,
+                    )
+                    compile_manifest(fastboop, file_path, bootpro_path, local_artifact)
 
         for existing_file in device_dir.glob("*.yaml"):
             if existing_file not in expected_paths:
