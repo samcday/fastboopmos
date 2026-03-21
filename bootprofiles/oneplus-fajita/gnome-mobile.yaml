@@ -6,10 +6,10 @@ rootfs:
       index: 1
       android_sparseimg:
         xz:
-          http: https://images.postmarketos.org/bpo/edge/oneplus-fajita/gnome-mobile/20260315-0536/20260315-0536-postmarketOS-edge-gnome-mobile-4-oneplus-fajita.img.xz
+          http: https://images.postmarketos.org/bpo/edge/oneplus-fajita/gnome-mobile/20260320-1136/20260320-1136-postmarketOS-edge-gnome-mobile-4-oneplus-fajita.img.xz
           content:
-            digest: sha512:3e14b74d8d86e79dc377299876fa03f64bc3ec7ee3eb6ba794c2902b3503f9d2f9c9a87e66a12a80018da7a282630f21b4d9ef3241bdc6d17eeb62b3adfc77fc
-            size_bytes: 899309816
+            digest: sha512:b03817b5afc212a642b630c76218ae0666ba08df1ddf77e8f788258ea2963fcac12e0df5ce0d829dfaedd672c8a01b4e1b70dd84c645f9c96cb550205afc2027
+            size_bytes: 918503796
 kernel:
   path: /vmlinuz
   fat:
@@ -17,10 +17,10 @@ kernel:
       index: 0
       android_sparseimg:
         xz:
-          http: https://images.postmarketos.org/bpo/edge/oneplus-fajita/gnome-mobile/20260315-0536/20260315-0536-postmarketOS-edge-gnome-mobile-4-oneplus-fajita.img.xz
+          http: https://images.postmarketos.org/bpo/edge/oneplus-fajita/gnome-mobile/20260320-1136/20260320-1136-postmarketOS-edge-gnome-mobile-4-oneplus-fajita.img.xz
           content:
-            digest: sha512:3e14b74d8d86e79dc377299876fa03f64bc3ec7ee3eb6ba794c2902b3503f9d2f9c9a87e66a12a80018da7a282630f21b4d9ef3241bdc6d17eeb62b3adfc77fc
-            size_bytes: 899309816
+            digest: sha512:b03817b5afc212a642b630c76218ae0666ba08df1ddf77e8f788258ea2963fcac12e0df5ce0d829dfaedd672c8a01b4e1b70dd84c645f9c96cb550205afc2027
+            size_bytes: 918503796
 dtbs:
   path: /dtbs
   fat:
@@ -28,10 +28,10 @@ dtbs:
       index: 0
       android_sparseimg:
         xz:
-          http: https://images.postmarketos.org/bpo/edge/oneplus-fajita/gnome-mobile/20260315-0536/20260315-0536-postmarketOS-edge-gnome-mobile-4-oneplus-fajita.img.xz
+          http: https://images.postmarketos.org/bpo/edge/oneplus-fajita/gnome-mobile/20260320-1136/20260320-1136-postmarketOS-edge-gnome-mobile-4-oneplus-fajita.img.xz
           content:
-            digest: sha512:3e14b74d8d86e79dc377299876fa03f64bc3ec7ee3eb6ba794c2902b3503f9d2f9c9a87e66a12a80018da7a282630f21b4d9ef3241bdc6d17eeb62b3adfc77fc
-            size_bytes: 899309816
+            digest: sha512:b03817b5afc212a642b630c76218ae0666ba08df1ddf77e8f788258ea2963fcac12e0df5ce0d829dfaedd672c8a01b4e1b70dd84c645f9c96cb550205afc2027
+            size_bytes: 918503796
 stage0:
   devices:
     oneplus-fajita: {}
