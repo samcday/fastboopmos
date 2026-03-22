@@ -19,6 +19,14 @@ jobs:
     runs-on: ubuntu-latest
     env:
       FASTBOOP_VERSION: 0.0.1-rc.9
+      MIRROR_BUCKET: ${{ secrets.FASTBOOPMOS_MIRROR_BUCKET }}
+      MIRROR_ENDPOINT_URL: ${{ vars.FASTBOOPMOS_MIRROR_ENDPOINT_URL }}
+      MIRROR_REGION: ${{ vars.FASTBOOPMOS_MIRROR_REGION }}
+      MIRROR_PREFIX: ${{ vars.FASTBOOPMOS_MIRROR_PREFIX }}
+      MIRROR_PUBLIC_BASE_URL: ${{ vars.FASTBOOPMOS_MIRROR_PUBLIC_BASE_URL }}
+      AWS_ACCESS_KEY_ID: ${{ secrets.FASTBOOPMOS_MIRROR_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.FASTBOOPMOS_MIRROR_SECRET_ACCESS_KEY }}
+      AWS_EC2_METADATA_DISABLED: "true"
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -79,11 +87,26 @@ jobs:
       - name: Generate canonical bootprofile YAMLs
         run: |
           DEVICE_INPUT="${{ github.event.inputs.device || '' }}"
+          : "${MIRROR_BUCKET:?missing FASTBOOPMOS_MIRROR_BUCKET secret}"
+          : "${MIRROR_ENDPOINT_URL:?missing FASTBOOPMOS_MIRROR_ENDPOINT_URL variable}"
+          : "${MIRROR_PUBLIC_BASE_URL:?missing FASTBOOPMOS_MIRROR_PUBLIC_BASE_URL variable}"
+          : "${AWS_ACCESS_KEY_ID:?missing FASTBOOPMOS_MIRROR_ACCESS_KEY_ID secret}"
+          : "${AWS_SECRET_ACCESS_KEY:?missing FASTBOOPMOS_MIRROR_SECRET_ACCESS_KEY secret}"
+
           args=(
             scripts/sync_bootprofiles.py
             --compile-bootpro
             --fastboop ./bin/fastboop
+            --mirror-bucket "$MIRROR_BUCKET"
+            --mirror-endpoint-url "$MIRROR_ENDPOINT_URL"
+            --mirror-public-base-url "$MIRROR_PUBLIC_BASE_URL"
           )
+          if [ -n "$MIRROR_REGION" ]; then
+            args+=(--mirror-region "$MIRROR_REGION")
+          fi
+          if [ -n "$MIRROR_PREFIX" ]; then
+            args+=(--mirror-prefix "$MIRROR_PREFIX")
+          fi
           if [ -n "$DEVICE_INPUT" ]; then
             args+=(--only-device "$DEVICE_INPUT")
           fi
