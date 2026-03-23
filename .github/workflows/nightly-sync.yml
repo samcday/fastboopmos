@@ -18,7 +18,7 @@ jobs:
   sync:
     runs-on: ubuntu-latest
     env:
-      FASTBOOP_VERSION: 0.0.1-rc.9
+      FASTBOOP_VERSION: 0.0.1-rc.11
       MIRROR_BUCKET: ${{ secrets.FASTBOOPMOS_MIRROR_BUCKET }}
       MIRROR_ENDPOINT_URL: ${{ vars.FASTBOOPMOS_MIRROR_ENDPOINT_URL }}
       MIRROR_REGION: ${{ vars.FASTBOOPMOS_MIRROR_REGION }}
