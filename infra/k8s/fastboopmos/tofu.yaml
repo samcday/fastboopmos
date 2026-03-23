@@ -16,8 +16,6 @@ spec:
       name: tofu-vars
   runnerPodTemplate:
     spec:
-      containers:
-        - name: terraform
-          envFrom:
-            - secretRef:
-                name: tofu-env
+      envFrom:
+        - secretRef:
+            name: tofu-env
