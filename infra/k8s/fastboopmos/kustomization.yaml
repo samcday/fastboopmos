@@ -13,6 +13,7 @@ resources:
   - httproute.yaml
   - service.yaml
   - tofu.yaml
+  - tofu-env.yaml
 configMapGenerator:
   - name: fastboopmos-gha-proxy-config
     literals:

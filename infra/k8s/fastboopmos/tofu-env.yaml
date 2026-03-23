@@ -1,0 +1,22 @@
+apiVersion: v1
+kind: Secret
+metadata:
+    name: tofu-env
+    namespace: fastboopmos
+stringData:
+    GITHUB_TOKEN: ENC[AES256_GCM,data:x/xumUDhKSduLkdL9QjFXf/Pkm60ynMQy5+VV2A2MqTFGTRNwp/lZ22xdQpwjgWhYDWNQWqJ89CQInNVw92Bb9UBrCuUmvjlLXnBA44vpW17deUNN0okoQG4SyA0,iv:vXloeaKO+8aGnwLBChLSVEw2w93DSeR+qG2qMTUp08A=,tag:8a3LimdkZB/pw5L/vI5Q8g==,type:str]
+sops:
+    age:
+        - recipient: age1utf3jfmexu3zsfqphejlh8ptx7av09jdh9n305jaqwa5s0nqevxsja4r76
+          enc: |
+            -----BEGIN AGE ENCRYPTED FILE-----
+            YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSA3akZrYVVKd2tGQXlrTWNN
+            Q0pPT29SVk1xbmlFZUVjQ3B1eTlNV0hiU0FZCnpHSng0KzVJaUtRZ0svdElEUFFV
+            NzE2Y0VxVFVtOE5rK1pvbVp3M0VaKzgKLS0tIDZsVEllMmQrZEhDTlYvVW5CeWFj
+            bjAxdXlpamsrL0ZlekpWTzRlaVNXY00KbJR6z8clsD5UPedv6muu7ANOmuSjVFVU
+            XXjY3DOI1jFqw9WxZ7SnYZHJwdmehIfNyq49hOMQOYGd0UjCXqGnTQ==
+            -----END AGE ENCRYPTED FILE-----
+    lastmodified: "2026-03-23T08:02:12Z"
+    mac: ENC[AES256_GCM,data:/T8oe6a8fogq8msu33jyzWX7dkpO1wYPyT8gXYV0KGN9JzC/qCDGEux4ZBwV711oQQSda7DmbHgu/FJQ8y3P0eyQsFnweEzKPg2upLvYqR5kF7WGYk3zrXXO0f0socROHIbdLGLFdcOLcmTpAJBLTd6frvkgzUWUeMiEbEYURNI=,iv:4NiAEPHQQ/PppjqIxHYgr7UUaF91qtaOAY54GnIuy9Y=,tag:RiAllYCglrjnwskrrjoMYQ==,type:str]
+    encrypted_regex: ^(data|stringData)$
+    version: 3.11.0
