@@ -7,10 +7,12 @@ resources:
   - deployment.yaml
   - gha-proxy-deployment.yaml
   - gha-proxy-service.yaml
+  - gitrepo.yaml
   - release-deployment.yaml
   - release-service.yaml
   - httproute.yaml
   - service.yaml
+  - tofu.yaml
 configMapGenerator:
   - name: fastboopmos-gha-proxy-config
     literals:

@@ -54,6 +54,25 @@ Mirror mode uses an S3-compatible API (including Backblaze B2's S3 endpoint), so
 `aws` CLI credentials are available in the environment (`AWS_ACCESS_KEY_ID`,
 `AWS_SECRET_ACCESS_KEY`).
 
+## OpenTofu + tf-controller wiring
+
+`infra/tofu` manages the GitHub Actions settings consumed by nightly sync.
+
+GitHub Actions secrets managed by OpenTofu:
+
+- `FASTBOOPMOS_MIRROR_BUCKET`
+- `FASTBOOPMOS_MIRROR_ACCESS_KEY_ID`
+- `FASTBOOPMOS_MIRROR_SECRET_ACCESS_KEY`
+
+GitHub Actions variables managed by OpenTofu:
+
+- `FASTBOOPMOS_MIRROR_ENDPOINT_URL`
+- `FASTBOOPMOS_MIRROR_REGION`
+- `FASTBOOPMOS_MIRROR_PUBLIC_BASE_URL`
+
+The tf-controller `Terraform` resource is at
+`infra/k8s/fastboopmos/github-actions-secrets-terraform.yaml`.
+
 Build a channel from committed `.bootpro` files (concatenated stream):
 
 ```bash

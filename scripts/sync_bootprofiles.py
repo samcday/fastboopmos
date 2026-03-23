@@ -62,7 +62,6 @@ class RootfsArtifact:
 class MirrorConfig:
     bucket: str
     endpoint_url: str | None
-    region: str | None
     prefix: str
     public_base_url: str
 
@@ -90,11 +89,9 @@ def parse_mirror_config(args: argparse.Namespace) -> MirrorConfig | None:
     prefix = normalize_object_prefix(args.mirror_prefix)
     public_base_url = normalize_public_base_url(args.mirror_public_base_url)
     endpoint_url = args.mirror_endpoint_url.strip() or None
-    region = args.mirror_region.strip() or None
     return MirrorConfig(
         bucket=bucket,
         endpoint_url=endpoint_url,
-        region=region,
         prefix=prefix,
         public_base_url=public_base_url,
     )
@@ -104,8 +101,6 @@ def aws_base_args(mirror: MirrorConfig) -> list[str]:
     args = ["aws", "s3api"]
     if mirror.endpoint_url:
         args.extend(["--endpoint-url", mirror.endpoint_url])
-    if mirror.region:
-        args.extend(["--region", mirror.region])
     return args
 
 
@@ -907,11 +902,6 @@ def parse_args() -> argparse.Namespace:
         "--mirror-endpoint-url",
         default="",
         help="Optional S3 endpoint URL (for B2/R2 and other S3-compatible backends)",
-    )
-    parser.add_argument(
-        "--mirror-region",
-        default="",
-        help="Optional S3 region",
     )
     parser.add_argument(
         "--mirror-prefix",

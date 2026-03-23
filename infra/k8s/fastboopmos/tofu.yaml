@@ -1,0 +1,23 @@
+apiVersion: infra.contrib.fluxcd.io/v1alpha2
+kind: Terraform
+metadata:
+  name: tofu
+spec:
+  interval: 30m
+  approvePlan: auto
+  path: ./infra/tofu
+  sourceRef:
+    kind: GitRepository
+    name: fastboopmos
+    namespace: flux-system
+  destroyResourcesOnDeletion: false
+  varsFrom:
+    - kind: Secret
+      name: tofu-vars
+  runnerPodTemplate:
+    spec:
+      containers:
+        - name: terraform
+          envFrom:
+            - secretRef:
+                name: tofu-env
