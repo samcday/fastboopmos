@@ -6,7 +6,7 @@ rootfs:
       index: 1
       android_sparseimg:
         xz:
-          http: https://images.postmarketos.org/bpo/edge/oneplus-fajita/sxmo-de-sway/20260320-1125/20260320-1125-postmarketOS-edge-sxmo-de-sway-1.18.0-oneplus-fajita.img.xz
+          http: https://f003.backblazeb2.com/fastboopmos/edge/rootfs/e629182c7ac49bac4f172efc0ae772eca46cb01400a48342f805ccc1ce8a66ca4825fdd26067756650b64d9a47a4166eb6caec4ee9a2d7cab5eafde5f802fe24.18.0-oneplus-fajita.img.xz
           content:
             digest: sha512:e629182c7ac49bac4f172efc0ae772eca46cb01400a48342f805ccc1ce8a66ca4825fdd26067756650b64d9a47a4166eb6caec4ee9a2d7cab5eafde5f802fe24
             size_bytes: 656070340
@@ -17,7 +17,7 @@ kernel:
       index: 0
       android_sparseimg:
         xz:
-          http: https://images.postmarketos.org/bpo/edge/oneplus-fajita/sxmo-de-sway/20260320-1125/20260320-1125-postmarketOS-edge-sxmo-de-sway-1.18.0-oneplus-fajita.img.xz
+          http: https://f003.backblazeb2.com/fastboopmos/edge/rootfs/e629182c7ac49bac4f172efc0ae772eca46cb01400a48342f805ccc1ce8a66ca4825fdd26067756650b64d9a47a4166eb6caec4ee9a2d7cab5eafde5f802fe24.18.0-oneplus-fajita.img.xz
           content:
             digest: sha512:e629182c7ac49bac4f172efc0ae772eca46cb01400a48342f805ccc1ce8a66ca4825fdd26067756650b64d9a47a4166eb6caec4ee9a2d7cab5eafde5f802fe24
             size_bytes: 656070340
@@ -28,7 +28,7 @@ dtbs:
       index: 0
       android_sparseimg:
         xz:
-          http: https://images.postmarketos.org/bpo/edge/oneplus-fajita/sxmo-de-sway/20260320-1125/20260320-1125-postmarketOS-edge-sxmo-de-sway-1.18.0-oneplus-fajita.img.xz
+          http: https://f003.backblazeb2.com/fastboopmos/edge/rootfs/e629182c7ac49bac4f172efc0ae772eca46cb01400a48342f805ccc1ce8a66ca4825fdd26067756650b64d9a47a4166eb6caec4ee9a2d7cab5eafde5f802fe24.18.0-oneplus-fajita.img.xz
           content:
             digest: sha512:e629182c7ac49bac4f172efc0ae772eca46cb01400a48342f805ccc1ce8a66ca4825fdd26067756650b64d9a47a4166eb6caec4ee9a2d7cab5eafde5f802fe24
             size_bytes: 656070340

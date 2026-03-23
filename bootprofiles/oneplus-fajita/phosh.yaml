@@ -6,7 +6,7 @@ rootfs:
       index: 1
       android_sparseimg:
         xz:
-          http: https://images.postmarketos.org/bpo/edge/oneplus-fajita/phosh/20260320-1128/20260320-1128-postmarketOS-edge-phosh-27-oneplus-fajita.img.xz
+          http: https://f003.backblazeb2.com/fastboopmos/edge/rootfs/9bc95776e45a4acc1985a902b25f6a7494498f548a9725dabbad3f7b1132f2405b85b264a418b358de04f3ae50d672bdda0f16d473d90f43fe9e8b601592f008.img.xz
           content:
             digest: sha512:9bc95776e45a4acc1985a902b25f6a7494498f548a9725dabbad3f7b1132f2405b85b264a418b358de04f3ae50d672bdda0f16d473d90f43fe9e8b601592f008
             size_bytes: 906394452
@@ -17,7 +17,7 @@ kernel:
       index: 0
       android_sparseimg:
         xz:
-          http: https://images.postmarketos.org/bpo/edge/oneplus-fajita/phosh/20260320-1128/20260320-1128-postmarketOS-edge-phosh-27-oneplus-fajita.img.xz
+          http: https://f003.backblazeb2.com/fastboopmos/edge/rootfs/9bc95776e45a4acc1985a902b25f6a7494498f548a9725dabbad3f7b1132f2405b85b264a418b358de04f3ae50d672bdda0f16d473d90f43fe9e8b601592f008.img.xz
           content:
             digest: sha512:9bc95776e45a4acc1985a902b25f6a7494498f548a9725dabbad3f7b1132f2405b85b264a418b358de04f3ae50d672bdda0f16d473d90f43fe9e8b601592f008
             size_bytes: 906394452
@@ -28,7 +28,7 @@ dtbs:
       index: 0
       android_sparseimg:
         xz:
-          http: https://images.postmarketos.org/bpo/edge/oneplus-fajita/phosh/20260320-1128/20260320-1128-postmarketOS-edge-phosh-27-oneplus-fajita.img.xz
+          http: https://f003.backblazeb2.com/fastboopmos/edge/rootfs/9bc95776e45a4acc1985a902b25f6a7494498f548a9725dabbad3f7b1132f2405b85b264a418b358de04f3ae50d672bdda0f16d473d90f43fe9e8b601592f008.img.xz
           content:
             digest: sha512:9bc95776e45a4acc1985a902b25f6a7494498f548a9725dabbad3f7b1132f2405b85b264a418b358de04f3ae50d672bdda0f16d473d90f43fe9e8b601592f008
             size_bytes: 906394452
