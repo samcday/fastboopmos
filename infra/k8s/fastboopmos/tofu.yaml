@@ -9,7 +9,6 @@ spec:
   sourceRef:
     kind: GitRepository
     name: fastboopmos
-    namespace: flux-system
   destroyResourcesOnDeletion: false
   varsFrom:
     - kind: Secret
