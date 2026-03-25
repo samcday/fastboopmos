@@ -6,7 +6,7 @@ rootfs:
       index: 1
       android_sparseimg:
         xz:
-          http: https://images.postmarketos.org/bpo/edge/oneplus-enchilada/phosh/20260320-1113/20260320-1113-postmarketOS-edge-phosh-27-oneplus-enchilada.img.xz
+          http: https://f003.backblazeb2.com/fastboopmos/edge/rootfs/cf378ffdc97d539016ca13ba82be7f8ec24b37b2ae9451c42ffe2c167238353143f0ad553ebe9ce25eab3348bfc31d01ea5909e71a09e1e8b781702f623d84b2.img.xz
           content:
             digest: sha512:cf378ffdc97d539016ca13ba82be7f8ec24b37b2ae9451c42ffe2c167238353143f0ad553ebe9ce25eab3348bfc31d01ea5909e71a09e1e8b781702f623d84b2
             size_bytes: 906256840
@@ -17,7 +17,7 @@ kernel:
       index: 0
       android_sparseimg:
         xz:
-          http: https://images.postmarketos.org/bpo/edge/oneplus-enchilada/phosh/20260320-1113/20260320-1113-postmarketOS-edge-phosh-27-oneplus-enchilada.img.xz
+          http: https://f003.backblazeb2.com/fastboopmos/edge/rootfs/cf378ffdc97d539016ca13ba82be7f8ec24b37b2ae9451c42ffe2c167238353143f0ad553ebe9ce25eab3348bfc31d01ea5909e71a09e1e8b781702f623d84b2.img.xz
           content:
             digest: sha512:cf378ffdc97d539016ca13ba82be7f8ec24b37b2ae9451c42ffe2c167238353143f0ad553ebe9ce25eab3348bfc31d01ea5909e71a09e1e8b781702f623d84b2
             size_bytes: 906256840
@@ -28,7 +28,7 @@ dtbs:
       index: 0
       android_sparseimg:
         xz:
-          http: https://images.postmarketos.org/bpo/edge/oneplus-enchilada/phosh/20260320-1113/20260320-1113-postmarketOS-edge-phosh-27-oneplus-enchilada.img.xz
+          http: https://f003.backblazeb2.com/fastboopmos/edge/rootfs/cf378ffdc97d539016ca13ba82be7f8ec24b37b2ae9451c42ffe2c167238353143f0ad553ebe9ce25eab3348bfc31d01ea5909e71a09e1e8b781702f623d84b2.img.xz
           content:
             digest: sha512:cf378ffdc97d539016ca13ba82be7f8ec24b37b2ae9451c42ffe2c167238353143f0ad553ebe9ce25eab3348bfc31d01ea5909e71a09e1e8b781702f623d84b2
             size_bytes: 906256840

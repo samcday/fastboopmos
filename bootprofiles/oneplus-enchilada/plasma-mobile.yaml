@@ -6,7 +6,7 @@ rootfs:
       index: 1
       android_sparseimg:
         xz:
-          http: https://images.postmarketos.org/bpo/edge/oneplus-enchilada/plasma-mobile/20260320-1117/20260320-1117-postmarketOS-edge-plasma-mobile-6-oneplus-enchilada.img.xz
+          http: https://f003.backblazeb2.com/fastboopmos/edge/rootfs/001413c24545d174aaad790967bde94a96ee2c9cd0a6e2fbfbeff01c71fb75a7ec6450224130d019ed9853b0ff2f0d01be18bb8528a88bc6038527f6beaeaf0b.img.xz
           content:
             digest: sha512:001413c24545d174aaad790967bde94a96ee2c9cd0a6e2fbfbeff01c71fb75a7ec6450224130d019ed9853b0ff2f0d01be18bb8528a88bc6038527f6beaeaf0b
             size_bytes: 1177202536
@@ -17,7 +17,7 @@ kernel:
       index: 0
       android_sparseimg:
         xz:
-          http: https://images.postmarketos.org/bpo/edge/oneplus-enchilada/plasma-mobile/20260320-1117/20260320-1117-postmarketOS-edge-plasma-mobile-6-oneplus-enchilada.img.xz
+          http: https://f003.backblazeb2.com/fastboopmos/edge/rootfs/001413c24545d174aaad790967bde94a96ee2c9cd0a6e2fbfbeff01c71fb75a7ec6450224130d019ed9853b0ff2f0d01be18bb8528a88bc6038527f6beaeaf0b.img.xz
           content:
             digest: sha512:001413c24545d174aaad790967bde94a96ee2c9cd0a6e2fbfbeff01c71fb75a7ec6450224130d019ed9853b0ff2f0d01be18bb8528a88bc6038527f6beaeaf0b
             size_bytes: 1177202536
@@ -28,7 +28,7 @@ dtbs:
       index: 0
       android_sparseimg:
         xz:
-          http: https://images.postmarketos.org/bpo/edge/oneplus-enchilada/plasma-mobile/20260320-1117/20260320-1117-postmarketOS-edge-plasma-mobile-6-oneplus-enchilada.img.xz
+          http: https://f003.backblazeb2.com/fastboopmos/edge/rootfs/001413c24545d174aaad790967bde94a96ee2c9cd0a6e2fbfbeff01c71fb75a7ec6450224130d019ed9853b0ff2f0d01be18bb8528a88bc6038527f6beaeaf0b.img.xz
           content:
             digest: sha512:001413c24545d174aaad790967bde94a96ee2c9cd0a6e2fbfbeff01c71fb75a7ec6450224130d019ed9853b0ff2f0d01be18bb8528a88bc6038527f6beaeaf0b
             size_bytes: 1177202536

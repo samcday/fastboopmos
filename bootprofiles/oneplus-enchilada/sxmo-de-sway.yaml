@@ -6,7 +6,7 @@ rootfs:
       index: 1
       android_sparseimg:
         xz:
-          http: https://images.postmarketos.org/bpo/edge/oneplus-enchilada/sxmo-de-sway/20260320-1111/20260320-1111-postmarketOS-edge-sxmo-de-sway-1.18.0-oneplus-enchilada.img.xz
+          http: https://f003.backblazeb2.com/fastboopmos/edge/rootfs/b03f91693b0886d550cb1b09c1d473d1c81873fdaced1ead969dd20636e0b994c6cbb11858674ae3ddd379f0e99a090f099f7b710c656e3cc0f89f0a55349e4d.18.0-oneplus-enchilada.img.xz
           content:
             digest: sha512:b03f91693b0886d550cb1b09c1d473d1c81873fdaced1ead969dd20636e0b994c6cbb11858674ae3ddd379f0e99a090f099f7b710c656e3cc0f89f0a55349e4d
             size_bytes: 655841232
@@ -17,7 +17,7 @@ kernel:
       index: 0
       android_sparseimg:
         xz:
-          http: https://images.postmarketos.org/bpo/edge/oneplus-enchilada/sxmo-de-sway/20260320-1111/20260320-1111-postmarketOS-edge-sxmo-de-sway-1.18.0-oneplus-enchilada.img.xz
+          http: https://f003.backblazeb2.com/fastboopmos/edge/rootfs/b03f91693b0886d550cb1b09c1d473d1c81873fdaced1ead969dd20636e0b994c6cbb11858674ae3ddd379f0e99a090f099f7b710c656e3cc0f89f0a55349e4d.18.0-oneplus-enchilada.img.xz
           content:
             digest: sha512:b03f91693b0886d550cb1b09c1d473d1c81873fdaced1ead969dd20636e0b994c6cbb11858674ae3ddd379f0e99a090f099f7b710c656e3cc0f89f0a55349e4d
             size_bytes: 655841232
@@ -28,7 +28,7 @@ dtbs:
       index: 0
       android_sparseimg:
         xz:
-          http: https://images.postmarketos.org/bpo/edge/oneplus-enchilada/sxmo-de-sway/20260320-1111/20260320-1111-postmarketOS-edge-sxmo-de-sway-1.18.0-oneplus-enchilada.img.xz
+          http: https://f003.backblazeb2.com/fastboopmos/edge/rootfs/b03f91693b0886d550cb1b09c1d473d1c81873fdaced1ead969dd20636e0b994c6cbb11858674ae3ddd379f0e99a090f099f7b710c656e3cc0f89f0a55349e4d.18.0-oneplus-enchilada.img.xz
           content:
             digest: sha512:b03f91693b0886d550cb1b09c1d473d1c81873fdaced1ead969dd20636e0b994c6cbb11858674ae3ddd379f0e99a090f099f7b710c656e3cc0f89f0a55349e4d
             size_bytes: 655841232
