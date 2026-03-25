@@ -27,3 +27,9 @@ variable "b2_bucket_name" {
   type        = string
   description = "Backblaze B2 bucket name for published artifacts."
 }
+
+variable "cache_prefix" {
+  type        = string
+  description = "Object key prefix for cached bootpro artifacts."
+  default     = "fastboopmos"
+}

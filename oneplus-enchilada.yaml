@@ -1,0 +1,40 @@
+id: pmos-{{ release_name }}-{{ ui_name }}-{{ target_name }}
+display_name: postmarketOS {{ release_name }} {{ ui_name }} {{ target_name }}
+rootfs:
+  ext4:
+    gpt:
+      index: 1
+      android_sparseimg:
+        xz:
+          http: {{ image_url }}
+          cors_safelisted_mode: true
+          content:
+            digest: sha512:{{ image_sha512 }}
+            size_bytes: {{ image_size }}
+kernel:
+  path: /vmlinuz
+  fat:
+    gpt:
+      index: 0
+      android_sparseimg:
+        xz:
+          http: {{ image_url }}
+          cors_safelisted_mode: true
+          content:
+            digest: sha512:{{ image_sha512 }}
+            size_bytes: {{ image_size }}
+dtbs:
+  path: /dtbs
+  fat:
+    gpt:
+      index: 0
+      android_sparseimg:
+        xz:
+          http: {{ image_url }}
+          cors_safelisted_mode: true
+          content:
+            digest: sha512:{{ image_sha512 }}
+            size_bytes: {{ image_size }}
+stage0:
+  devices:
+    oneplus-enchilada: {}
