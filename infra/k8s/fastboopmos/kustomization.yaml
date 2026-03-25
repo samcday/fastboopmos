@@ -33,10 +33,10 @@ configMapGenerator:
       - REQUEST_TIMEOUT_SECONDS=300
       - GITHUB_OWNER=samcday
       - GITHUB_REPO=fastboopmos
-      - TAG_PREFIX=edge-
       - ASSET_NAME=edge.channel
       - SHA256_ASSET_NAME=edge.channel.sha256
-      - TAG_CACHE_SECONDS=60
+    files:
+      - EDGE_CHANNEL_ARTIFACT_ID=latest.txt
   - name: fastboopmos-release-script
     files:
       - channel_release_app.py=channel_release_app.py

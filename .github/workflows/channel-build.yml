@@ -3,6 +3,8 @@ name: Build Channel
 on:
   push:
     branches: [main]
+    paths-ignore:
+      - infra/k8s/fastboopmos/latest.txt
   pull_request:
     branches: [main]
   schedule:
@@ -110,6 +112,7 @@ jobs:
           sha256sum dist/edge.channel | awk '{print $1}' > dist/edge.channel.sha256
 
       - name: Upload workflow artifact
+        id: upload_channel
         uses: actions/upload-artifact@v4
         with:
           name: edge-channel
@@ -118,20 +121,23 @@ jobs:
             dist/edge.channel
             dist/edge.channel.sha256
 
-      - name: Generate edge release tag
-        if: github.event_name == 'push'
-        id: tag
+      - name: Update live artifact pointer
+        if: github.event_name == 'push' || github.event_name == 'schedule'
         run: |
           set -euo pipefail
-          tag="edge-$(date -u +%Y%m%d%H%M%S)"
-          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          artifact_id="${{ steps.upload_channel.outputs.artifact-id }}"
+          if [ -z "$artifact_id" ]; then
+            echo "missing upload artifact-id output" >&2
+            exit 1
+          fi
 
-      - name: Publish edge release
-        if: github.event_name == 'push'
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ steps.tag.outputs.tag }}
-          name: ${{ steps.tag.outputs.tag }}
-          files: |
-            dist/edge.channel
-            dist/edge.channel.sha256
+          printf '%s\n' "$artifact_id" > infra/k8s/fastboopmos/latest.txt
+          if git diff --quiet -- infra/k8s/fastboopmos/latest.txt; then
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add infra/k8s/fastboopmos/latest.txt
+          git commit -m "infra: advance edge channel artifact pointer"
+          git push

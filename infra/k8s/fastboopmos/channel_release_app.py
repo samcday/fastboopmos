@@ -2,25 +2,21 @@
 
 from __future__ import annotations
 
-import json
 import mimetypes
 import os
-import re
 import shutil
 import tempfile
 import threading
-import time
 import urllib.error
 import urllib.parse
 import urllib.request
-from dataclasses import dataclass
+import zipfile
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 
 CHUNK_SIZE = 1024 * 1024
-PER_PAGE = 100
-USER_AGENT = "fastboopmos-release-app/0.1"
+USER_AGENT = "fastboopmos-release-app/0.2"
 
 ALLOWED_ORIGIN_EXACT = {
     "https://www.fastboop.win",
@@ -31,6 +27,13 @@ ALLOWED_LOCALHOST_HOSTS = {"localhost", "127.0.0.1"}
 
 class RangeNotSatisfiableError(Exception):
     pass
+
+
+class ReleaseError(Exception):
+    def __init__(self, status: int, message: str):
+        super().__init__(message)
+        self.status = status
+        self.message = message
 
 
 def env_int(name: str, default: int) -> int:
@@ -46,35 +49,15 @@ def env_int(name: str, default: int) -> int:
 PORT = env_int("PORT", 8080)
 CACHE_DIR = Path(os.environ.get("CACHE_DIR", "/cache")).resolve()
 REQUEST_TIMEOUT_SECONDS = env_int("REQUEST_TIMEOUT_SECONDS", 300)
-TAG_CACHE_SECONDS = env_int("TAG_CACHE_SECONDS", 60)
 GITHUB_OWNER = os.environ.get("GITHUB_OWNER", "samcday").strip()
 GITHUB_REPO = os.environ.get("GITHUB_REPO", "fastboopmos").strip()
-TAG_PREFIX = os.environ.get("TAG_PREFIX", "edge-").strip()
 ASSET_NAME = os.environ.get("ASSET_NAME", "edge.channel").strip()
 SHA256_ASSET_NAME = os.environ.get("SHA256_ASSET_NAME", "edge.channel.sha256").strip()
+EDGE_CHANNEL_ARTIFACT_ID = os.environ.get("EDGE_CHANNEL_ARTIFACT_ID", "").strip()
 GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN", "").strip()
 
-TAG_RE = re.compile(rf"^{re.escape(TAG_PREFIX)}[0-9]{{14}}$")
-
-
-class ReleaseError(Exception):
-    def __init__(self, status: int, message: str):
-        super().__init__(message)
-        self.status = status
-        self.message = message
-
-
-@dataclass(frozen=True)
-class LiveRelease:
-    tag: str
-    assets: dict[str, str]
-
-
-_LIVE_LOCK = threading.Lock()
-_LIVE_CACHE: tuple[float, LiveRelease] | None = None
-
-_ASSET_LOCKS: dict[str, threading.Lock] = {}
-_ASSET_LOCKS_GUARD = threading.Lock()
+_ARTIFACT_LOCKS: dict[str, threading.Lock] = {}
+_ARTIFACT_LOCKS_GUARD = threading.Lock()
 
 
 def github_headers() -> dict[str, str]:
@@ -88,104 +71,31 @@ def github_headers() -> dict[str, str]:
     return headers
 
 
-def github_json(url: str) -> object:
-    req = urllib.request.Request(url, method="GET", headers=github_headers())
-    try:
-        with urllib.request.urlopen(req, timeout=REQUEST_TIMEOUT_SECONDS) as response:
-            return json.loads(response.read().decode("utf-8"))
-    except urllib.error.HTTPError as err:
-        status = 502
-        if err.code == 404:
-            status = 404
-        raise ReleaseError(status, f"GitHub API request failed: {err.code}") from err
-    except urllib.error.URLError as err:
-        raise ReleaseError(502, f"GitHub API request failed: {err}") from err
-    except ValueError as err:
-        raise ReleaseError(502, "GitHub API returned invalid JSON") from err
-
-
-def load_latest_release() -> LiveRelease:
+def artifact_archive_url(artifact_id: str) -> str:
     owner = urllib.parse.quote(GITHUB_OWNER, safe="")
     repo = urllib.parse.quote(GITHUB_REPO, safe="")
-
-    best_tag = ""
-    best_assets: dict[str, str] = {}
-    page = 1
-    while True:
-        url = (
-            f"https://api.github.com/repos/{owner}/{repo}/releases"
-            f"?per_page={PER_PAGE}&page={page}"
-        )
-        payload = github_json(url)
-        if not isinstance(payload, list):
-            raise ReleaseError(502, "unexpected releases payload")
-        if not payload:
-            break
-
-        for release in payload:
-            if not isinstance(release, dict):
-                continue
-            tag = release.get("tag_name")
-            if not isinstance(tag, str) or TAG_RE.fullmatch(tag) is None:
-                continue
-            if tag <= best_tag:
-                continue
-
-            assets = release.get("assets")
-            if not isinstance(assets, list):
-                continue
-
-            asset_urls: dict[str, str] = {}
-            for asset in assets:
-                if not isinstance(asset, dict):
-                    continue
-                name = asset.get("name")
-                download = asset.get("browser_download_url")
-                if isinstance(name, str) and isinstance(download, str):
-                    asset_urls[name] = download
-
-            if ASSET_NAME not in asset_urls or SHA256_ASSET_NAME not in asset_urls:
-                continue
-            best_tag = tag
-            best_assets = asset_urls
-
-        if len(payload) < PER_PAGE:
-            break
-        page += 1
-
-    if not best_tag:
-        raise ReleaseError(503, "no edge release with channel assets found")
-    return LiveRelease(tag=best_tag, assets=best_assets)
+    return f"https://api.github.com/repos/{owner}/{repo}/actions/artifacts/{artifact_id}/zip"
 
 
-def current_live_release() -> LiveRelease:
-    global _LIVE_CACHE
-    now = time.time()
-    with _LIVE_LOCK:
-        if _LIVE_CACHE is not None:
-            ts, cached = _LIVE_CACHE
-            if now - ts < TAG_CACHE_SECONDS:
-                return cached
-        live = load_latest_release()
-        _LIVE_CACHE = (now, live)
-        return live
-
-
-def asset_lock(key: str) -> threading.Lock:
-    with _ASSET_LOCKS_GUARD:
-        lock = _ASSET_LOCKS.get(key)
+def artifact_lock(artifact_id: str) -> threading.Lock:
+    with _ARTIFACT_LOCKS_GUARD:
+        lock = _ARTIFACT_LOCKS.get(artifact_id)
         if lock is None:
             lock = threading.Lock()
-            _ASSET_LOCKS[key] = lock
+            _ARTIFACT_LOCKS[artifact_id] = lock
     return lock
 
 
-def asset_path(tag: str, asset_name: str) -> Path:
-    return CACHE_DIR / tag / asset_name
+def asset_path(artifact_id: str, asset_name: str) -> Path:
+    return CACHE_DIR / artifact_id / asset_name
 
 
-def download_asset(url: str, destination: Path) -> None:
-    req = urllib.request.Request(url, method="GET", headers=github_headers())
+def download_archive(artifact_id: str, destination: Path) -> None:
+    req = urllib.request.Request(
+        artifact_archive_url(artifact_id),
+        method="GET",
+        headers=github_headers(),
+    )
     try:
         with urllib.request.urlopen(req, timeout=REQUEST_TIMEOUT_SECONDS) as response:
             with destination.open("wb") as output:
@@ -194,33 +104,55 @@ def download_asset(url: str, destination: Path) -> None:
         status = 502
         if err.code == 404:
             status = 404
-        raise ReleaseError(status, f"failed to download asset: {err.code}") from err
+        raise ReleaseError(status, f"failed to download artifact archive: {err.code}") from err
     except urllib.error.URLError as err:
-        raise ReleaseError(502, f"failed to download asset: {err}") from err
+        raise ReleaseError(502, f"failed to download artifact archive: {err}") from err
 
 
-def materialize_asset(live: LiveRelease, asset_name: str) -> Path:
-    target = asset_path(live.tag, asset_name)
-    if target.is_file():
-        return target
+def extract_asset_from_zip(archive: zipfile.ZipFile, asset_name: str, destination: Path) -> None:
+    members = [member for member in archive.infolist() if not member.is_dir()]
+    selected = next((m for m in members if Path(m.filename).name == asset_name), None)
+    if selected is None:
+        raise ReleaseError(502, f"artifact archive is missing {asset_name}")
 
-    key = f"{live.tag}:{asset_name}"
-    lock = asset_lock(key)
+    with archive.open(selected, "r") as source, destination.open("wb") as output:
+        shutil.copyfileobj(source, output, CHUNK_SIZE)
+
+
+def materialize_assets(artifact_id: str) -> None:
+    target_dir = CACHE_DIR / artifact_id
+    target_channel = target_dir / ASSET_NAME
+    target_sha256 = target_dir / SHA256_ASSET_NAME
+    if target_channel.is_file() and target_sha256.is_file():
+        return
+
+    lock = artifact_lock(artifact_id)
     with lock:
-        if target.is_file():
-            return target
+        if target_channel.is_file() and target_sha256.is_file():
+            return
 
-        url = live.assets.get(asset_name)
-        if not isinstance(url, str) or not url:
-            raise ReleaseError(503, f"live release is missing {asset_name}")
+        target_dir.mkdir(parents=True, exist_ok=True)
+        with tempfile.TemporaryDirectory(prefix=f".edge-{artifact_id}-", dir=CACHE_DIR) as tmpdir:
+            tmpdir_path = Path(tmpdir)
+            zip_path = tmpdir_path / "artifact.zip"
+            channel_tmp = tmpdir_path / ASSET_NAME
+            sha256_tmp = tmpdir_path / SHA256_ASSET_NAME
 
-        target.parent.mkdir(parents=True, exist_ok=True)
-        with tempfile.TemporaryDirectory(prefix=f".edge-{live.tag}-", dir=CACHE_DIR) as tmpdir:
-            tmp_path = Path(tmpdir) / asset_name
-            download_asset(url, tmp_path)
-            tmp_path.replace(target)
+            download_archive(artifact_id, zip_path)
+            try:
+                with zipfile.ZipFile(zip_path) as archive:
+                    extract_asset_from_zip(archive, ASSET_NAME, channel_tmp)
+                    extract_asset_from_zip(archive, SHA256_ASSET_NAME, sha256_tmp)
+            except zipfile.BadZipFile as err:
+                raise ReleaseError(502, "artifact archive is not a valid zip file") from err
 
-    return target
+            channel_tmp.replace(target_channel)
+            sha256_tmp.replace(target_sha256)
+
+
+def materialize_asset(asset_name: str) -> Path:
+    materialize_assets(EDGE_CHANNEL_ARTIFACT_ID)
+    return asset_path(EDGE_CHANNEL_ARTIFACT_ID, asset_name)
 
 
 def content_type_for(path: Path) -> str:
@@ -291,7 +223,7 @@ def parse_single_byte_range(range_header: str, size: int) -> tuple[int, int]:
 
 class ReleaseHandler(BaseHTTPRequestHandler):
     protocol_version = "HTTP/1.1"
-    server_version = "fastboopmos-release-app/0.1"
+    server_version = "fastboopmos-release-app/0.2"
 
     def do_HEAD(self) -> None:
         self.handle_request(head_only=True)
@@ -316,14 +248,8 @@ class ReleaseHandler(BaseHTTPRequestHandler):
             self.send_text(200, "ok\n", head_only=head_only)
             return
 
-        try:
-            live = current_live_release()
-        except ReleaseError as err:
-            self.send_text(err.status, f"{err.message}\n", head_only=head_only)
-            return
-
         if path == "/__fastboopmos/live":
-            self.send_text(200, f"{live.tag}\n", head_only=head_only)
+            self.send_text(200, f"artifact_id={EDGE_CHANNEL_ARTIFACT_ID}\n", head_only=head_only)
             return
 
         if path == "/edge.channel":
@@ -335,7 +261,7 @@ class ReleaseHandler(BaseHTTPRequestHandler):
             return
 
         try:
-            asset = materialize_asset(live, asset_name)
+            asset = materialize_asset(asset_name)
             size = asset.stat().st_size
         except ReleaseError as err:
             self.send_text(err.status, f"{err.message}\n", head_only=head_only)
@@ -420,6 +346,8 @@ class ReleaseHandler(BaseHTTPRequestHandler):
 def main() -> None:
     if not GITHUB_OWNER or not GITHUB_REPO:
         raise RuntimeError("GITHUB_OWNER and GITHUB_REPO must be configured")
+    if not EDGE_CHANNEL_ARTIFACT_ID or not EDGE_CHANNEL_ARTIFACT_ID.isdigit():
+        raise RuntimeError("EDGE_CHANNEL_ARTIFACT_ID must be a numeric GitHub artifact id")
     CACHE_DIR.mkdir(parents=True, exist_ok=True)
     server = ThreadingHTTPServer(("0.0.0.0", PORT), ReleaseHandler)
     server.serve_forever()
