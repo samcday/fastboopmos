@@ -64,4 +64,4 @@ python scripts/build_channel.py \
   - ensures bootpro cache keys exist for selected artifacts
   - assembles `dist/edge.channel` from cached bootpros
   - uploads workflow artifact every run
-  - on `push` to `main`, publishes release assets
+  - on `push` to `main` and nightly schedule, updates `infra/k8s/fastboopmos/latest.txt` to the new artifact id
