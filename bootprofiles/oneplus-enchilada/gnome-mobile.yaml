@@ -7,6 +7,7 @@ rootfs:
       android_sparseimg:
         xz:
           http: https://images.postmarketos.org/bpo/edge/oneplus-enchilada/gnome-mobile/20260315-0522/20260315-0522-postmarketOS-edge-gnome-mobile-4-oneplus-enchilada.img.xz
+          cors_safelisted_mode: true
           content:
             digest: sha512:55024af6e56485a0e268368e4550a4ba60b05c9b81a330edcbf6988a31790fdb69b735e7ad7328fba1157f63958642f0689f242048d94f5dcd007b0f766ecff6
             size_bytes: 899225240
@@ -18,6 +19,7 @@ kernel:
       android_sparseimg:
         xz:
           http: https://images.postmarketos.org/bpo/edge/oneplus-enchilada/gnome-mobile/20260315-0522/20260315-0522-postmarketOS-edge-gnome-mobile-4-oneplus-enchilada.img.xz
+          cors_safelisted_mode: true
           content:
             digest: sha512:55024af6e56485a0e268368e4550a4ba60b05c9b81a330edcbf6988a31790fdb69b735e7ad7328fba1157f63958642f0689f242048d94f5dcd007b0f766ecff6
             size_bytes: 899225240
@@ -29,6 +31,7 @@ dtbs:
       android_sparseimg:
         xz:
           http: https://images.postmarketos.org/bpo/edge/oneplus-enchilada/gnome-mobile/20260315-0522/20260315-0522-postmarketOS-edge-gnome-mobile-4-oneplus-enchilada.img.xz
+          cors_safelisted_mode: true
           content:
             digest: sha512:55024af6e56485a0e268368e4550a4ba60b05c9b81a330edcbf6988a31790fdb69b735e7ad7328fba1157f63958642f0689f242048d94f5dcd007b0f766ecff6
             size_bytes: 899225240

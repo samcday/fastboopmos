@@ -63,7 +63,6 @@ class MirrorConfig:
     bucket: str
     endpoint_url: str | None
     prefix: str
-    public_base_url: str
 
 
 def normalize_object_prefix(prefix: str) -> str:
@@ -73,27 +72,17 @@ def normalize_object_prefix(prefix: str) -> str:
     return stripped
 
 
-def normalize_public_base_url(url: str) -> str:
-    cleaned = url.rstrip("/")
-    parsed = urlparse(cleaned)
-    if parsed.scheme not in {"http", "https"} or not parsed.netloc:
-        raise ValueError("mirror public base URL must be an absolute http/https URL")
-    return cleaned
-
-
 def parse_mirror_config(args: argparse.Namespace) -> MirrorConfig | None:
     bucket = args.mirror_bucket.strip()
     if not bucket:
         return None
 
     prefix = normalize_object_prefix(args.mirror_prefix)
-    public_base_url = normalize_public_base_url(args.mirror_public_base_url)
     endpoint_url = args.mirror_endpoint_url.strip() or None
     return MirrorConfig(
         bucket=bucket,
         endpoint_url=endpoint_url,
         prefix=prefix,
-        public_base_url=public_base_url,
     )
 
 
@@ -206,71 +195,12 @@ def s3_delete_object(mirror: MirrorConfig, key: str) -> None:
     )
 
 
-def suffix_from_url(image_url: str) -> str:
-    parsed = urlparse(image_url)
-    return "".join(Path(parsed.path).suffixes)
-
-
-def mirror_rootfs_object_key(mirror_prefix: str, release_name: str, artifact: RootfsArtifact) -> str:
-    suffix = suffix_from_url(artifact.image_url)
-    if suffix:
-        return f"{mirror_prefix}/{release_name}/rootfs/{artifact.image_sha512}{suffix}"
-    return f"{mirror_prefix}/{release_name}/rootfs/{artifact.image_sha512}"
-
-
 def mirror_bootpro_object_key(
     mirror_prefix: str,
     release_name: str,
-    fastboop_version: str,
-    manifest_content: str,
-) -> str:
-    digest = hashlib.sha256()
-    digest.update(b"bootpro-v1\0")
-    digest.update(fastboop_version.encode("utf-8"))
-    digest.update(b"\0")
-    digest.update(manifest_content.encode("utf-8"))
-    return f"{mirror_prefix}/{release_name}/bootpro/{digest.hexdigest()}.bootpro"
-
-
-def mirror_public_url(mirror: MirrorConfig, key: str) -> str:
-    return f"{mirror.public_base_url}/{key}"
-
-
-def ensure_rootfs_mirrored(
-    mirror: MirrorConfig,
-    release_name: str,
     artifact: RootfsArtifact,
-    local_artifact_path: Path,
 ) -> str:
-    key = mirror_rootfs_object_key(mirror.prefix, release_name, artifact)
-    existing = s3_head_object(mirror, key)
-    if existing is not None:
-        size = existing.get("ContentLength")
-        metadata = existing.get("Metadata")
-        existing_sha512 = None
-        if isinstance(metadata, Mapping):
-            meta_sha = metadata.get("sha512")
-            if isinstance(meta_sha, str):
-                existing_sha512 = meta_sha
-        if size == artifact.image_size and existing_sha512 == artifact.image_sha512:
-            return key
-
-    s3_put_object(
-        mirror,
-        key,
-        local_artifact_path,
-        {
-            "sha512": artifact.image_sha512,
-            "size_bytes": str(artifact.image_size),
-            "source_url_b64": base64.urlsafe_b64encode(
-                artifact.image_url.encode("utf-8")
-            ).decode("ascii"),
-            "source_name_b64": base64.urlsafe_b64encode(
-                artifact.image_name.encode("utf-8")
-            ).decode("ascii"),
-        },
-    )
-    return key
+    return f"{mirror_prefix}/{release_name}/bootpro/{artifact.image_sha512}.bootpro"
 
 
 def fastboop_version(fastboop: str) -> str:
@@ -383,6 +313,7 @@ def render_manifest(
         "      android_sparseimg:",
         "        xz:",
         f"          http: {image_url}",
+        "          cors_safelisted_mode: true",
         "          content:",
         f"            digest: sha512:{image_sha512}",
         f"            size_bytes: {image_size}",
@@ -394,6 +325,7 @@ def render_manifest(
         "      android_sparseimg:",
         "        xz:",
         f"          http: {image_url}",
+        "          cors_safelisted_mode: true",
         "          content:",
         f"            digest: sha512:{image_sha512}",
         f"            size_bytes: {image_size}",
@@ -405,6 +337,7 @@ def render_manifest(
         "      android_sparseimg:",
         "        xz:",
         f"          http: {image_url}",
+        "          cors_safelisted_mode: true",
         "          content:",
         f"            digest: sha512:{image_sha512}",
         f"            size_bytes: {image_size}",
@@ -587,19 +520,17 @@ def ensure_hint_mirrored(
     artifact: RootfsArtifact,
     device_profiles: list[str],
     local_artifact_path: Path,
-    image_url: str,
 ) -> str:
     manifest_content = render_hint_manifest(
         release_name=release_name,
         artifact=artifact,
         device_profiles=device_profiles,
-        image_url=image_url,
+        image_url=artifact.image_url,
     )
     key = mirror_bootpro_object_key(
         mirror_prefix=mirror.prefix,
         release_name=release_name,
-        fastboop_version=fastboop_ver,
-        manifest_content=manifest_content,
+        artifact=artifact,
     )
     existing = s3_head_object(mirror, key)
     if existing is not None:
@@ -738,9 +669,7 @@ def sync_bootprofiles(
             if existing_dir.is_dir() and existing_dir.name not in configured_devices:
                 shutil.rmtree(existing_dir)
 
-    desired_rootfs_keys: set[str] = set()
     desired_bootpro_keys: set[str] = set()
-    image_url_overrides: dict[str, str] = {}
     fastboop_ver: str | None = None
     if compile_bootpro and mirror is not None:
         fastboop_ver = fastboop_version(fastboop)
@@ -757,7 +686,7 @@ def sync_bootprofiles(
         if not artifacts:
             raise ValueError(f"no rootfs images found for {pmos_device!r}")
 
-        if mirror is not None:
+        if mirror is not None and compile_bootpro:
             for artifact in artifacts:
                 local_artifact = ensure_artifact_cached(
                     image_url=artifact.image_url,
@@ -765,37 +694,24 @@ def sync_bootprofiles(
                     image_size=artifact.image_size,
                     cache_dir=artifact_cache_dir,
                 )
-                rootfs_key = ensure_rootfs_mirrored(
+                if fastboop_ver is None:
+                    raise RuntimeError("fastboop version was not initialized")
+                bootpro_key = ensure_hint_mirrored(
                     mirror=mirror,
                     release_name=release_name,
+                    fastboop=fastboop,
+                    fastboop_ver=fastboop_ver,
                     artifact=artifact,
+                    device_profiles=device_profiles,
                     local_artifact_path=local_artifact,
                 )
-                desired_rootfs_keys.add(rootfs_key)
-                mirrored_url = mirror_public_url(mirror, rootfs_key)
-                image_url_overrides[artifact.image_url] = mirrored_url
-
-                if compile_bootpro:
-                    if fastboop_ver is None:
-                        raise RuntimeError("fastboop version was not initialized")
-                    bootpro_key = ensure_hint_mirrored(
-                        mirror=mirror,
-                        release_name=release_name,
-                        fastboop=fastboop,
-                        fastboop_ver=fastboop_ver,
-                        artifact=artifact,
-                        device_profiles=device_profiles,
-                        local_artifact_path=local_artifact,
-                        image_url=mirrored_url,
-                    )
-                    desired_bootpro_keys.add(bootpro_key)
+                desired_bootpro_keys.add(bootpro_key)
 
         manifests = build_manifests_for_device(
             release_name=release_name,
             device_entry=release_map[pmos_device],
             pmos_device=pmos_device,
             device_profiles=device_profiles,
-            image_url_overrides=image_url_overrides,
         )
         if not manifests:
             raise ValueError(f"no rootfs images found for {pmos_device!r}")
@@ -838,11 +754,6 @@ def sync_bootprofiles(
                     existing_file.unlink()
 
     if mirror is not None and mirror_purge:
-        rootfs_prefix = f"{mirror.prefix}/{release_name}/rootfs/"
-        existing_rootfs = s3_list_keys(mirror, rootfs_prefix)
-        for key in sorted(existing_rootfs - desired_rootfs_keys):
-            s3_delete_object(mirror, key)
-
         if compile_bootpro:
             bootpro_prefix = f"{mirror.prefix}/{release_name}/bootpro/"
             existing_bootpros = s3_list_keys(mirror, bootpro_prefix)
@@ -896,7 +807,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--mirror-bucket",
         default="",
-        help="S3-compatible bucket to mirror rootfs artifacts and optimized .bootpro hints",
+        help="S3-compatible bucket used as lookaside cache for optimized .bootpro hints",
     )
     parser.add_argument(
         "--mirror-endpoint-url",
@@ -906,18 +817,13 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--mirror-prefix",
         default="fastboopmos",
-        help="Object prefix used for mirrored rootfs and .bootpro hint objects",
-    )
-    parser.add_argument(
-        "--mirror-public-base-url",
-        default="",
-        help="Public base URL used in generated manifest URLs for mirrored rootfs objects",
+        help="Object prefix used for cached .bootpro hint objects",
     )
     parser.add_argument(
         "--mirror-purge",
         action=argparse.BooleanOptionalAction,
         default=True,
-        help="Delete mirrored rootfs/.bootpro objects not present in current index.json desired state",
+        help="Delete cached .bootpro objects not present in current index.json desired state",
     )
     return parser.parse_args()
 

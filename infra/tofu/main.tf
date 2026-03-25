@@ -38,9 +38,3 @@ resource "github_actions_variable" "mirror_endpoint_url" {
   variable_name = "FASTBOOPMOS_MIRROR_ENDPOINT_URL"
   value         = data.b2_account_info.b2.s3_api_url
 }
-
-resource "github_actions_variable" "mirror_public_base_url" {
-  repository    = var.github_repository
-  variable_name = "FASTBOOPMOS_MIRROR_PUBLIC_BASE_URL"
-  value         = data.b2_account_info.b2.download_url
-}
