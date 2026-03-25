@@ -6,7 +6,7 @@ rootfs:
       index: 1
       android_sparseimg:
         xz:
-          http: https://images.postmarketos.org/bpo/edge/xiaomi-beryllium/gnome-mobile/20260315-1526/20260315-1526-postmarketOS-edge-gnome-mobile-4-xiaomi-beryllium-ebbg.img.xz
+          http: https://f003.backblazeb2.com/fastboopmos/edge/rootfs/e1744ed210f47c3d90472439263b8529d2087b52add8525048cfa7043ed82c9152930c1555aad72547312c58534d0499d4a25893a85689ce48ba82a1c0631abb.img.xz
           content:
             digest: sha512:e1744ed210f47c3d90472439263b8529d2087b52add8525048cfa7043ed82c9152930c1555aad72547312c58534d0499d4a25893a85689ce48ba82a1c0631abb
             size_bytes: 903588696
@@ -17,7 +17,7 @@ kernel:
       index: 0
       android_sparseimg:
         xz:
-          http: https://images.postmarketos.org/bpo/edge/xiaomi-beryllium/gnome-mobile/20260315-1526/20260315-1526-postmarketOS-edge-gnome-mobile-4-xiaomi-beryllium-ebbg.img.xz
+          http: https://f003.backblazeb2.com/fastboopmos/edge/rootfs/e1744ed210f47c3d90472439263b8529d2087b52add8525048cfa7043ed82c9152930c1555aad72547312c58534d0499d4a25893a85689ce48ba82a1c0631abb.img.xz
           content:
             digest: sha512:e1744ed210f47c3d90472439263b8529d2087b52add8525048cfa7043ed82c9152930c1555aad72547312c58534d0499d4a25893a85689ce48ba82a1c0631abb
             size_bytes: 903588696
@@ -28,7 +28,7 @@ dtbs:
       index: 0
       android_sparseimg:
         xz:
-          http: https://images.postmarketos.org/bpo/edge/xiaomi-beryllium/gnome-mobile/20260315-1526/20260315-1526-postmarketOS-edge-gnome-mobile-4-xiaomi-beryllium-ebbg.img.xz
+          http: https://f003.backblazeb2.com/fastboopmos/edge/rootfs/e1744ed210f47c3d90472439263b8529d2087b52add8525048cfa7043ed82c9152930c1555aad72547312c58534d0499d4a25893a85689ce48ba82a1c0631abb.img.xz
           content:
             digest: sha512:e1744ed210f47c3d90472439263b8529d2087b52add8525048cfa7043ed82c9152930c1555aad72547312c58534d0499d4a25893a85689ce48ba82a1c0631abb
             size_bytes: 903588696

@@ -6,7 +6,7 @@ rootfs:
       index: 1
       android_sparseimg:
         xz:
-          http: https://images.postmarketos.org/bpo/edge/xiaomi-beryllium/plasma-mobile/20260315-1542/20260315-1542-postmarketOS-edge-plasma-mobile-6-xiaomi-beryllium-tianma.img.xz
+          http: https://f003.backblazeb2.com/fastboopmos/edge/rootfs/b80b27d7a022e43d8a3e640f12ad0e3cdc0c9fa9a74a959150e79f5ae24cd974155db5d4db2ed74f751dcc8349f9fd6a573511cb5cc34a9e0d7e02254eea5e87.img.xz
           content:
             digest: sha512:b80b27d7a022e43d8a3e640f12ad0e3cdc0c9fa9a74a959150e79f5ae24cd974155db5d4db2ed74f751dcc8349f9fd6a573511cb5cc34a9e0d7e02254eea5e87
             size_bytes: 1180058060
@@ -17,7 +17,7 @@ kernel:
       index: 0
       android_sparseimg:
         xz:
-          http: https://images.postmarketos.org/bpo/edge/xiaomi-beryllium/plasma-mobile/20260315-1542/20260315-1542-postmarketOS-edge-plasma-mobile-6-xiaomi-beryllium-tianma.img.xz
+          http: https://f003.backblazeb2.com/fastboopmos/edge/rootfs/b80b27d7a022e43d8a3e640f12ad0e3cdc0c9fa9a74a959150e79f5ae24cd974155db5d4db2ed74f751dcc8349f9fd6a573511cb5cc34a9e0d7e02254eea5e87.img.xz
           content:
             digest: sha512:b80b27d7a022e43d8a3e640f12ad0e3cdc0c9fa9a74a959150e79f5ae24cd974155db5d4db2ed74f751dcc8349f9fd6a573511cb5cc34a9e0d7e02254eea5e87
             size_bytes: 1180058060
@@ -28,7 +28,7 @@ dtbs:
       index: 0
       android_sparseimg:
         xz:
-          http: https://images.postmarketos.org/bpo/edge/xiaomi-beryllium/plasma-mobile/20260315-1542/20260315-1542-postmarketOS-edge-plasma-mobile-6-xiaomi-beryllium-tianma.img.xz
+          http: https://f003.backblazeb2.com/fastboopmos/edge/rootfs/b80b27d7a022e43d8a3e640f12ad0e3cdc0c9fa9a74a959150e79f5ae24cd974155db5d4db2ed74f751dcc8349f9fd6a573511cb5cc34a9e0d7e02254eea5e87.img.xz
           content:
             digest: sha512:b80b27d7a022e43d8a3e640f12ad0e3cdc0c9fa9a74a959150e79f5ae24cd974155db5d4db2ed74f751dcc8349f9fd6a573511cb5cc34a9e0d7e02254eea5e87
             size_bytes: 1180058060

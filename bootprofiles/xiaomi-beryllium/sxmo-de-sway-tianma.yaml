@@ -6,7 +6,7 @@ rootfs:
       index: 1
       android_sparseimg:
         xz:
-          http: https://images.postmarketos.org/bpo/edge/xiaomi-beryllium/sxmo-de-sway/20260320-2317/20260320-2317-postmarketOS-edge-sxmo-de-sway-1.18.0-xiaomi-beryllium-tianma.img.xz
+          http: https://f003.backblazeb2.com/fastboopmos/edge/rootfs/cd8c25d3bf2815e761004e73edabff6afa69bedda417150e72816b272f02b1879d0ae754853d2de613d5ffe3e1f23611a66d35e568f9284439c692c85f6dfacb.18.0-xiaomi-beryllium-tianma.img.xz
           content:
             digest: sha512:cd8c25d3bf2815e761004e73edabff6afa69bedda417150e72816b272f02b1879d0ae754853d2de613d5ffe3e1f23611a66d35e568f9284439c692c85f6dfacb
             size_bytes: 659691276
@@ -17,7 +17,7 @@ kernel:
       index: 0
       android_sparseimg:
         xz:
-          http: https://images.postmarketos.org/bpo/edge/xiaomi-beryllium/sxmo-de-sway/20260320-2317/20260320-2317-postmarketOS-edge-sxmo-de-sway-1.18.0-xiaomi-beryllium-tianma.img.xz
+          http: https://f003.backblazeb2.com/fastboopmos/edge/rootfs/cd8c25d3bf2815e761004e73edabff6afa69bedda417150e72816b272f02b1879d0ae754853d2de613d5ffe3e1f23611a66d35e568f9284439c692c85f6dfacb.18.0-xiaomi-beryllium-tianma.img.xz
           content:
             digest: sha512:cd8c25d3bf2815e761004e73edabff6afa69bedda417150e72816b272f02b1879d0ae754853d2de613d5ffe3e1f23611a66d35e568f9284439c692c85f6dfacb
             size_bytes: 659691276
@@ -28,7 +28,7 @@ dtbs:
       index: 0
       android_sparseimg:
         xz:
-          http: https://images.postmarketos.org/bpo/edge/xiaomi-beryllium/sxmo-de-sway/20260320-2317/20260320-2317-postmarketOS-edge-sxmo-de-sway-1.18.0-xiaomi-beryllium-tianma.img.xz
+          http: https://f003.backblazeb2.com/fastboopmos/edge/rootfs/cd8c25d3bf2815e761004e73edabff6afa69bedda417150e72816b272f02b1879d0ae754853d2de613d5ffe3e1f23611a66d35e568f9284439c692c85f6dfacb.18.0-xiaomi-beryllium-tianma.img.xz
           content:
             digest: sha512:cd8c25d3bf2815e761004e73edabff6afa69bedda417150e72816b272f02b1879d0ae754853d2de613d5ffe3e1f23611a66d35e568f9284439c692c85f6dfacb
             size_bytes: 659691276
