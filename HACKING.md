@@ -1,90 +1,67 @@
 # hax0rz
 
-Aight so here's how we gon' do it.
+## Device templates
 
-## Device allow-list
+Each supported pmOS device is represented by a top-level Jinja2 template:
 
-`devices.yaml` maps postmarketOS device names to one or more fastboop device profile IDs.
+- `oneplus-enchilada.yaml`
+- `oneplus-fajita.yaml`
 
-```yaml
-oneplus-fajita:
-  device_profiles:
-    - oneplus-fajita
-```
+Templates render a full BootProfile manifest. The script injects runtime values from
+`https://images.postmarketos.org/bpo/index.json`:
 
-The nightly sync job resolves all available UI variants per allow-listed device from
-`https://images.postmarketos.org/bpo/index.json`, writes manifests under `bootprofiles/`, and
-compiles optimized `.bootpro` binaries beside each YAML.
+- `release_name`
+- `pmos_device`
+- `ui_name`
+- `variant`
+- `target_name`
+- `image_name`
+- `image_url`
+- `image_sha512`
+- `image_size`
+- `timestamp`
 
-When mirror mode is enabled, `index.json` is treated as the complete source of truth for the
-target release. The sync will:
+The same template is rendered once per discovered UI variant for that device.
 
-- compile optimized hint-bearing `.bootpro` objects for every rootfs artifact
-- upload those `.bootpro` objects to the lookaside bucket, keyed by source rootfs sha512
-- purge lookaside `.bootpro` objects that are not present in the current desired state
+## Cache model
 
-## Local workflow
+The S3/B2 bucket is a memoization cache for compiled hint-bearing `.bootpro` artifacts.
 
-Generate canonical manifests:
+- Key format: `<prefix>/<release>/bootpro/<artifact_sha512>-<scope_hash>.bootpro`
+- `scope_hash` is derived from rendered manifest content + fastboop version
+- If key exists: CI downloads and reuses it
+- If key is missing: CI compiles from source artifact, uploads once, then reuses
 
-```bash
-python scripts/sync_bootprofiles.py
-```
+No generated manifests or `.bootpro` files are committed to git.
 
-Generate manifests and compiled optimized `.bootpro` artifacts:
-
-```bash
-python scripts/sync_bootprofiles.py --compile-bootpro --fastboop /path/to/fastboop
-```
-
-Run release reconciliation with bucket mirroring + purge:
+## Local run (same logic as CI)
 
 ```bash
-python scripts/sync_bootprofiles.py \
-  --compile-bootpro \
+python scripts/build_channel.py \
   --fastboop /path/to/fastboop \
-  --mirror-bucket your-bucket \
-  --mirror-endpoint-url https://s3.us-west-000.backblazeb2.com \
-  --mirror-prefix fastboopmos
+  --cache-bucket your-bucket \
+  --cache-endpoint-url https://s3.eu-central-003.backblazeb2.com \
+  --cache-prefix fastboopmos \
+  --output dist/edge.channel
 ```
 
-Mirror mode uses an S3-compatible API (including Backblaze B2's S3 endpoint), so ensure
-`aws` CLI credentials are available in the environment (`AWS_ACCESS_KEY_ID`,
-`AWS_SECRET_ACCESS_KEY`).
-
-## OpenTofu + tf-controller wiring
-
-`infra/tofu` manages the GitHub Actions settings consumed by nightly sync.
-
-GitHub Actions secrets managed by OpenTofu:
-
-- `FASTBOOPMOS_MIRROR_BUCKET`
-- `FASTBOOPMOS_MIRROR_ACCESS_KEY_ID`
-- `FASTBOOPMOS_MIRROR_SECRET_ACCESS_KEY`
-
-GitHub Actions variables managed by OpenTofu:
-
-- `FASTBOOPMOS_MIRROR_ENDPOINT_URL`
-- `FASTBOOPMOS_MIRROR_REGION`
-
-The tf-controller `Terraform` resource is at
-`infra/k8s/fastboopmos/github-actions-secrets-terraform.yaml`.
-
-Build a channel from committed `.bootpro` files (concatenated stream):
+Optional targeted device run:
 
 ```bash
-python scripts/build_channel.py
+python scripts/build_channel.py \
+  --fastboop /path/to/fastboop \
+  --cache-bucket your-bucket \
+  --cache-endpoint-url https://s3.eu-central-003.backblazeb2.com \
+  --only-device oneplus-fajita \
+  --output dist/edge.channel
 ```
 
 ## Automation
 
-- `.github/workflows/nightly-sync.yml`
-  - runs nightly
-  - refreshes `bootprofiles/*.yaml`
-  - compiles optimized `bootprofiles/*.bootpro`
-  - opens one PR per changed `bootprofiles/<device>/` subtree
-- `.github/workflows/publish-channel.yml`
-  - runs on pull requests and on `main`
-  - concatenates committed `.bootpro` artifacts into `edge.channel`
-  - uploads workflow artifacts for CI/debugging
-  - on `main`, creates `edge-YYYYMMDDhhmmss` release tags and attaches channel assets
+- `.github/workflows/channel-build.yml`
+  - runs on PRs, pushes to `main`, nightly, and manual dispatch
+  - supports optional `device` input for targeted runs
+  - ensures bootpro cache keys exist for selected artifacts
+  - assembles `dist/edge.channel` from cached bootpros
+  - uploads workflow artifact every run
+  - on `push` to `main`, publishes release assets

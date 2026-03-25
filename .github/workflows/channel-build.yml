@@ -1,36 +1,36 @@
-name: Nightly BootProfile Sync
+name: Build Channel
 
 on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
   schedule:
     - cron: "17 3 * * *"
   workflow_dispatch:
     inputs:
       device:
-        description: "Optional device id from devices.yaml (for targeted sync)"
+        description: "Optional postmarketOS device id (e.g. oneplus-fajita)"
         required: false
         type: string
 
 permissions:
   contents: write
-  pull-requests: write
 
 jobs:
-  sync:
+  build:
     runs-on: ubuntu-latest
     env:
       FASTBOOP_VERSION: 0.0.1-rc.11
-      MIRROR_BUCKET: ${{ secrets.FASTBOOPMOS_MIRROR_BUCKET }}
-      MIRROR_ENDPOINT_URL: ${{ vars.FASTBOOPMOS_MIRROR_ENDPOINT_URL }}
-      MIRROR_REGION: ${{ vars.FASTBOOPMOS_MIRROR_REGION }}
-      MIRROR_PREFIX: ${{ vars.FASTBOOPMOS_MIRROR_PREFIX }}
-      AWS_ACCESS_KEY_ID: ${{ secrets.FASTBOOPMOS_MIRROR_ACCESS_KEY_ID }}
-      AWS_SECRET_ACCESS_KEY: ${{ secrets.FASTBOOPMOS_MIRROR_SECRET_ACCESS_KEY }}
+      CACHE_BUCKET: ${{ secrets.FASTBOOPMOS_CACHE_BUCKET }}
+      CACHE_ENDPOINT_URL: ${{ vars.FASTBOOPMOS_CACHE_ENDPOINT_URL }}
+      CACHE_PREFIX: ${{ vars.FASTBOOPMOS_CACHE_PREFIX || 'fastboopmos' }}
+      AWS_ACCESS_KEY_ID: ${{ secrets.FASTBOOPMOS_CACHE_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.FASTBOOPMOS_CACHE_SECRET_ACCESS_KEY }}
       AWS_EC2_METADATA_DISABLED: "true"
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -40,7 +40,7 @@ jobs:
       - name: Install Python deps
         run: |
           python -m pip install --upgrade pip
-          pip install pyyaml
+          pip install jinja2
 
       - name: Download fastboop CLI release
         run: |
@@ -83,38 +83,55 @@ jobs:
               output.chmod(output.stat().st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
           PY
 
-      - name: Generate canonical bootprofile YAMLs
+      - name: Build channel from index + templates + cache
         run: |
           DEVICE_INPUT="${{ github.event.inputs.device || '' }}"
-          : "${MIRROR_BUCKET:?missing FASTBOOPMOS_MIRROR_BUCKET secret}"
-          : "${MIRROR_ENDPOINT_URL:?missing FASTBOOPMOS_MIRROR_ENDPOINT_URL variable}"
-          : "${AWS_ACCESS_KEY_ID:?missing FASTBOOPMOS_MIRROR_ACCESS_KEY_ID secret}"
-          : "${AWS_SECRET_ACCESS_KEY:?missing FASTBOOPMOS_MIRROR_SECRET_ACCESS_KEY secret}"
+          : "${CACHE_BUCKET:?missing FASTBOOPMOS_CACHE_BUCKET secret}"
+          : "${CACHE_ENDPOINT_URL:?missing FASTBOOPMOS_CACHE_ENDPOINT_URL variable}"
+          : "${AWS_ACCESS_KEY_ID:?missing FASTBOOPMOS_CACHE_ACCESS_KEY_ID secret}"
+          : "${AWS_SECRET_ACCESS_KEY:?missing FASTBOOPMOS_CACHE_SECRET_ACCESS_KEY secret}"
 
           args=(
-            scripts/sync_bootprofiles.py
-            --compile-bootpro
+            scripts/build_channel.py
             --fastboop ./bin/fastboop
-            --mirror-bucket "$MIRROR_BUCKET"
-            --mirror-endpoint-url "$MIRROR_ENDPOINT_URL"
+            --cache-bucket "$CACHE_BUCKET"
+            --cache-endpoint-url "$CACHE_ENDPOINT_URL"
+            --cache-prefix "$CACHE_PREFIX"
+            --output dist/edge.channel
           )
-          if [ -n "$MIRROR_REGION" ]; then
-            args+=(--mirror-region "$MIRROR_REGION")
-          fi
-          if [ -n "$MIRROR_PREFIX" ]; then
-            args+=(--mirror-prefix "$MIRROR_PREFIX")
-          fi
           if [ -n "$DEVICE_INPUT" ]; then
             args+=(--only-device "$DEVICE_INPUT")
           fi
           python "${args[@]}"
 
-      - name: Configure git author
+      - name: Write channel metadata
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          mkdir -p dist
+          sha256sum dist/edge.channel | awk '{print $1}' > dist/edge.channel.sha256
 
-      - name: Open one PR per changed device
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: python scripts/open_device_prs.py
+      - name: Upload workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: edge-channel
+          if-no-files-found: error
+          path: |
+            dist/edge.channel
+            dist/edge.channel.sha256
+
+      - name: Generate edge release tag
+        if: github.event_name == 'push'
+        id: tag
+        run: |
+          set -euo pipefail
+          tag="edge-$(date -u +%Y%m%d%H%M%S)"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+
+      - name: Publish edge release
+        if: github.event_name == 'push'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.tag.outputs.tag }}
+          name: ${{ steps.tag.outputs.tag }}
+          files: |
+            dist/edge.channel
+            dist/edge.channel.sha256
