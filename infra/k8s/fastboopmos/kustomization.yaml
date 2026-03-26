@@ -15,7 +15,7 @@ configMapGenerator:
     literals:
       - PORT=8080
       - CACHE_DIR=/cache
-      - CACHE_MAX_BYTES=8589934592
+      - MIN_FREESPACE_PCT=10
       - REQUEST_TIMEOUT_SECONDS=300
       - GITHUB_OWNER=samcday
       - GITHUB_REPO=fastboopmos

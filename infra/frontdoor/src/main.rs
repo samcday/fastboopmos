@@ -33,7 +33,7 @@ const PER_PAGE: u32 = 100;
 struct Config {
     port: u16,
     cache_dir: PathBuf,
-    cache_max_bytes: u64,
+    min_freespace_pct: f64,
     request_timeout_secs: u64,
     github_owner: String,
     github_repo: String,
@@ -61,7 +61,10 @@ impl Config {
         Self {
             port: env_u64("PORT", 8080) as u16,
             cache_dir: PathBuf::from(env_or("CACHE_DIR", "/cache")),
-            cache_max_bytes: env_u64("CACHE_MAX_BYTES", 0),
+            min_freespace_pct: {
+                let raw = env_or("MIN_FREESPACE_PCT", "10");
+                raw.parse::<f64>().unwrap_or_else(|_| panic!("MIN_FREESPACE_PCT must be a number"))
+            },
             request_timeout_secs: env_u64("REQUEST_TIMEOUT_SECONDS", 300),
             github_owner: env_or("GITHUB_OWNER", "samcday"),
             github_repo: env_or("GITHUB_REPO", "fastboopmos"),
@@ -420,7 +423,7 @@ async fn gha_materialize(state: &AppState, run_id: &str) -> Result<GhaCacheEntry
         .ok();
     let _ = fs::remove_dir_all(&tmp_dir).await;
 
-    gha_enforce_cache_limit(state).await;
+    enforce_disk_freespace(state).await;
 
     gha_load_cache_entry(&cache_dir, &key)
         .await
@@ -432,42 +435,81 @@ async fn gha_materialize(state: &AppState, run_id: &str) -> Result<GhaCacheEntry
         })
 }
 
-async fn gha_enforce_cache_limit(state: &AppState) {
-    if state.config.cache_max_bytes == 0 {
+// ---------------------------------------------------------------------------
+// Disk-pressure-aware cache eviction
+// ---------------------------------------------------------------------------
+
+fn freespace_pct(path: &Path) -> Option<f64> {
+    use std::ffi::CString;
+    let c_path = CString::new(path.as_os_str().as_encoded_bytes()).ok()?;
+    unsafe {
+        let mut buf: libc::statvfs = std::mem::zeroed();
+        if libc::statvfs(c_path.as_ptr(), &mut buf) != 0 {
+            return None;
+        }
+        let total = buf.f_blocks as f64;
+        if total == 0.0 {
+            return None;
+        }
+        let free = buf.f_bfree as f64;
+        Some((free / total) * 100.0)
+    }
+}
+
+async fn enforce_disk_freespace(state: &AppState) {
+    if state.config.min_freespace_pct <= 0.0 {
         return;
     }
 
-    let cache_dir = state.gha_cache_dir();
-    let mut entries = Vec::new();
-    let mut total: u64 = 0;
+    let cache_dir = &state.config.cache_dir;
 
-    let mut dir = match fs::read_dir(&cache_dir).await {
-        Ok(d) => d,
-        Err(_) => return,
-    };
-
-    while let Ok(Some(entry)) = dir.next_entry().await {
-        let path = entry.path();
-        if path.extension().and_then(|e| e.to_str()) != Some("blob") {
-            continue;
+    // check before doing any work
+    if let Some(pct) = freespace_pct(cache_dir) {
+        if pct >= state.config.min_freespace_pct {
+            return;
         }
-        if let Ok(meta) = fs::metadata(&path).await {
-            let mtime = meta
-                .modified()
-                .unwrap_or(std::time::SystemTime::UNIX_EPOCH);
-            total += meta.len();
-            entries.push((mtime, meta.len(), path));
+        tracing::info!(
+            "free space {pct:.1}% below threshold {:.1}%, evicting old cache entries",
+            state.config.min_freespace_pct,
+        );
+    } else {
+        return;
+    }
+
+    // collect all evictable .blob files across gha/ and release/ subdirs
+    let mut entries: Vec<(std::time::SystemTime, PathBuf)> = Vec::new();
+    for subdir in [state.gha_cache_dir(), state.release_cache_dir()] {
+        let mut dir = match fs::read_dir(&subdir).await {
+            Ok(d) => d,
+            Err(_) => continue,
+        };
+        while let Ok(Some(entry)) = dir.next_entry().await {
+            let path = entry.path();
+            if path.extension().and_then(|e| e.to_str()) == Some("blob") {
+                if let Ok(meta) = fs::metadata(&path).await {
+                    let mtime = meta.modified().unwrap_or(std::time::SystemTime::UNIX_EPOCH);
+                    entries.push((mtime, path));
+                }
+            }
         }
     }
 
-    entries.sort_by_key(|(mtime, _, _)| *mtime);
+    entries.sort_by_key(|(mtime, _)| *mtime);
 
-    while total > state.config.cache_max_bytes && entries.len() > 1 {
-        let (_, size, path) = entries.remove(0);
+    while !entries.is_empty() {
+        if let Some(pct) = freespace_pct(cache_dir) {
+            if pct >= state.config.min_freespace_pct {
+                break;
+            }
+        } else {
+            break;
+        }
+
+        let (_, path) = entries.remove(0);
         let meta_path = path.with_extension("json");
+        tracing::info!("evicting {}", path.display());
         let _ = fs::remove_file(&path).await;
         let _ = fs::remove_file(&meta_path).await;
-        total -= size;
     }
 }
 
@@ -571,6 +613,8 @@ async fn release_materialize(state: &AppState) -> Result<(), AppError> {
     .await
     .ok();
     let _ = fs::remove_dir_all(&tmp_dir).await;
+
+    enforce_disk_freespace(state).await;
 
     Ok(())
 }

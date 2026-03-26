@@ -58,4 +58,6 @@ spec:
               mountPath: /cache
       volumes:
         - name: cache
-          emptyDir: {}
+          hostPath:
+            path: /var/cache/fastboopmos
+            type: DirectoryOrCreate
