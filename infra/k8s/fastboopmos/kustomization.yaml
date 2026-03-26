@@ -9,6 +9,7 @@ resources:
   - gha-proxy-service.yaml
   - gitrepo.yaml
   - release-deployment.yaml
+  - release-secret.yaml
   - release-service.yaml
   - httproute.yaml
   - service.yaml
