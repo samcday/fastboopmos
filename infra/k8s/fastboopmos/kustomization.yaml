@@ -3,20 +3,15 @@ kind: Kustomization
 namespace: fastboopmos
 resources:
   - certificate.yaml
-  - caddy-config.yaml
   - deployment.yaml
-  - gha-proxy-deployment.yaml
-  - gha-proxy-service.yaml
   - gitrepo.yaml
-  - release-deployment.yaml
   - release-secret.yaml
-  - release-service.yaml
   - httproute.yaml
   - service.yaml
   - tofu.yaml
   - tofu-env.yaml
 configMapGenerator:
-  - name: fastboopmos-gha-proxy-config
+  - name: fastboopmos-frontdoor-config
     literals:
       - PORT=8080
       - CACHE_DIR=/cache
@@ -24,20 +19,7 @@ configMapGenerator:
       - REQUEST_TIMEOUT_SECONDS=300
       - GITHUB_OWNER=samcday
       - GITHUB_REPO=fastboopmos
-  - name: fastboopmos-gha-proxy-script
-    files:
-      - gha_proxy.py=gha_proxy.py
-  - name: fastboopmos-release-config
-    literals:
-      - PORT=8080
-      - CACHE_DIR=/cache
-      - REQUEST_TIMEOUT_SECONDS=300
-      - GITHUB_OWNER=samcday
-      - GITHUB_REPO=fastboopmos
       - ASSET_NAME=edge.channel
       - SHA256_ASSET_NAME=edge.channel.sha256
     files:
       - EDGE_CHANNEL_ARTIFACT_ID=latest.txt
-  - name: fastboopmos-release-script
-    files:
-      - channel_release_app.py=channel_release_app.py
