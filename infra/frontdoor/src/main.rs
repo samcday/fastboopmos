@@ -63,7 +63,8 @@ impl Config {
             cache_dir: PathBuf::from(env_or("CACHE_DIR", "/cache")),
             min_freespace_pct: {
                 let raw = env_or("MIN_FREESPACE_PCT", "10");
-                raw.parse::<f64>().unwrap_or_else(|_| panic!("MIN_FREESPACE_PCT must be a number"))
+                raw.parse::<f64>()
+                    .unwrap_or_else(|_| panic!("MIN_FREESPACE_PCT must be a number"))
             },
             request_timeout_secs: env_u64("REQUEST_TIMEOUT_SECONDS", 300),
             github_owner: env_or("GITHUB_OWNER", "samcday"),
@@ -134,6 +135,11 @@ impl AppState {
             .entry(key.to_string())
             .or_insert_with(|| Arc::new(Mutex::new(())))
             .clone()
+    }
+
+    async fn gha_lock_remove(&self, key: &str) {
+        let mut locks = self.gha_locks.lock().await;
+        locks.remove(key);
     }
 }
 
@@ -242,6 +248,8 @@ async fn resolve_single_artifact(state: &AppState, run_id: &str) -> Result<Strin
 }
 
 async fn download_archive(state: &AppState, url: &str, dest: &Path) -> Result<(), AppError> {
+    use tokio::io::AsyncWriteExt;
+
     let resp = state
         .http
         .get(url)
@@ -259,14 +267,23 @@ async fn download_archive(state: &AppState, url: &str, dest: &Path) -> Result<()
         )));
     }
 
-    let bytes = resp
-        .bytes()
+    let mut stream = resp.bytes_stream();
+    let mut file = tokio::fs::File::create(dest)
         .await
-        .map_err(|e| AppError::bad_gateway(format!("read failed: {e}")))?;
+        .map_err(|e| AppError(StatusCode::INTERNAL_SERVER_ERROR, format!("create: {e}")))?;
 
-    fs::write(dest, &bytes)
+    use futures_util::StreamExt;
+    while let Some(chunk) = stream.next().await {
+        let chunk =
+            chunk.map_err(|e| AppError::bad_gateway(format!("download stream failed: {e}")))?;
+        file.write_all(&chunk)
+            .await
+            .map_err(|e| AppError(StatusCode::INTERNAL_SERVER_ERROR, format!("write: {e}")))?;
+    }
+
+    file.flush()
         .await
-        .map_err(|e| AppError(StatusCode::INTERNAL_SERVER_ERROR, format!("write: {e}")))?;
+        .map_err(|e| AppError(StatusCode::INTERNAL_SERVER_ERROR, format!("flush: {e}")))?;
 
     Ok(())
 }
@@ -280,6 +297,36 @@ fn hex_encode(bytes: &[u8]) -> String {
 }
 
 // ---------------------------------------------------------------------------
+// Temp dir cleanup guard
+// ---------------------------------------------------------------------------
+
+struct TmpDirGuard {
+    path: PathBuf,
+    defused: bool,
+}
+
+impl TmpDirGuard {
+    fn new(path: PathBuf) -> Self {
+        Self {
+            path,
+            defused: false,
+        }
+    }
+
+    fn defuse(&mut self) {
+        self.defused = true;
+    }
+}
+
+impl Drop for TmpDirGuard {
+    fn drop(&mut self) {
+        if !self.defused {
+            let _ = std::fs::remove_dir_all(&self.path);
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
 // GHA proxy: extract single file from zip, cache by run ID
 // ---------------------------------------------------------------------------
 
@@ -290,7 +337,10 @@ struct GhaCacheEntry {
     size: u64,
 }
 
-fn extract_single_file_from_zip(zip_path: &Path, blob_path: &Path) -> Result<(String, String), AppError> {
+fn extract_single_file_from_zip(
+    zip_path: &Path,
+    blob_path: &Path,
+) -> Result<(String, String), AppError> {
     let file = std::fs::File::open(zip_path)
         .map_err(|e| AppError(StatusCode::INTERNAL_SERVER_ERROR, format!("open zip: {e}")))?;
     let mut archive = zip::ZipArchive::new(file)
@@ -383,6 +433,7 @@ async fn gha_materialize(state: &AppState, run_id: &str) -> Result<GhaCacheEntry
 
     // re-check after lock
     if let Some(entry) = gha_load_cache_entry(&cache_dir, &key).await {
+        state.gha_lock_remove(&key).await;
         return Ok(entry);
     }
 
@@ -390,6 +441,7 @@ async fn gha_materialize(state: &AppState, run_id: &str) -> Result<GhaCacheEntry
 
     let tmp_dir = cache_dir.join(format!(".tmp-{key}"));
     fs::create_dir_all(&tmp_dir).await.ok();
+    let mut tmp_guard = TmpDirGuard::new(tmp_dir.clone());
 
     let zip_path = tmp_dir.join("artifact.zip");
     let blob_tmp = tmp_dir.join("blob.tmp");
@@ -417,12 +469,17 @@ async fn gha_materialize(state: &AppState, run_id: &str) -> Result<GhaCacheEntry
         "etag": etag,
     });
 
-    fs::rename(&blob_tmp, &blob_path).await.ok();
+    fs::rename(&blob_tmp, &blob_path)
+        .await
+        .map_err(|e| AppError(StatusCode::INTERNAL_SERVER_ERROR, format!("rename blob: {e}")))?;
     fs::write(&meta_path, serde_json::to_string(&meta).unwrap())
         .await
-        .ok();
+        .map_err(|e| AppError(StatusCode::INTERNAL_SERVER_ERROR, format!("write meta: {e}")))?;
+
+    tmp_guard.defuse();
     let _ = fs::remove_dir_all(&tmp_dir).await;
 
+    state.gha_lock_remove(&key).await;
     enforce_disk_freespace(state).await;
 
     gha_load_cache_entry(&cache_dir, &key)
@@ -487,7 +544,8 @@ async fn enforce_disk_freespace(state: &AppState) {
             let path = entry.path();
             if path.extension().and_then(|e| e.to_str()) == Some("blob") {
                 if let Ok(meta) = fs::metadata(&path).await {
-                    let mtime = meta.modified().unwrap_or(std::time::SystemTime::UNIX_EPOCH);
+                    let mtime =
+                        meta.modified().unwrap_or(std::time::SystemTime::UNIX_EPOCH);
                     entries.push((mtime, path));
                 }
             }
@@ -517,7 +575,11 @@ async fn enforce_disk_freespace(state: &AppState) {
 // Release: serve edge channel assets from a specific artifact
 // ---------------------------------------------------------------------------
 
-fn extract_named_file_from_zip(zip_path: &Path, name: &str, dest: &Path) -> Result<(), AppError> {
+fn extract_named_file_from_zip(
+    zip_path: &Path,
+    name: &str,
+    dest: &Path,
+) -> Result<(), AppError> {
     let file = std::fs::File::open(zip_path)
         .map_err(|e| AppError(StatusCode::INTERNAL_SERVER_ERROR, format!("open zip: {e}")))?;
     let mut archive = zip::ZipArchive::new(file)
@@ -566,13 +628,17 @@ async fn release_materialize(state: &AppState) -> Result<(), AppError> {
     let channel_path = target_dir.join(&state.config.asset_name);
     let sha256_path = target_dir.join(&state.config.sha256_asset_name);
 
-    if channel_path.is_file() && sha256_path.is_file() {
+    if fs::try_exists(&channel_path).await.unwrap_or(false)
+        && fs::try_exists(&sha256_path).await.unwrap_or(false)
+    {
         return Ok(());
     }
 
     let _guard = state.release_lock.lock().await;
 
-    if channel_path.is_file() && sha256_path.is_file() {
+    if fs::try_exists(&channel_path).await.unwrap_or(false)
+        && fs::try_exists(&sha256_path).await.unwrap_or(false)
+    {
         return Ok(());
     }
 
@@ -580,6 +646,7 @@ async fn release_materialize(state: &AppState) -> Result<(), AppError> {
 
     let tmp_dir = release_dir.join(format!(".tmp-{artifact_id}"));
     fs::create_dir_all(&tmp_dir).await.ok();
+    let mut tmp_guard = TmpDirGuard::new(tmp_dir.clone());
 
     let zip_path = tmp_dir.join("artifact.zip");
     let url = format!(
@@ -605,13 +672,25 @@ async fn release_materialize(state: &AppState) -> Result<(), AppError> {
 
     fs::rename(tmp_dir.join(&state.config.asset_name), &channel_path)
         .await
-        .ok();
+        .map_err(|e| {
+            AppError(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                format!("rename channel asset: {e}"),
+            )
+        })?;
     fs::rename(
         tmp_dir.join(&state.config.sha256_asset_name),
         &sha256_path,
     )
     .await
-    .ok();
+    .map_err(|e| {
+        AppError(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("rename sha256 asset: {e}"),
+        )
+    })?;
+
+    tmp_guard.defuse();
     let _ = fs::remove_dir_all(&tmp_dir).await;
 
     enforce_disk_freespace(state).await;
@@ -932,11 +1011,23 @@ async fn main() {
         )
         .route(
             "/__fastboopmos/live",
-            get(release_live_handler)
-                .options(release_options_handler),
+            get(release_live_handler).options(release_options_handler),
         )
         .with_state(state);
 
     let listener = tokio::net::TcpListener::bind(&addr).await.unwrap();
-    axum::serve(listener, app).await.unwrap();
+    axum::serve(listener, app)
+        .with_graceful_shutdown(shutdown_signal())
+        .await
+        .unwrap();
+}
+
+async fn shutdown_signal() {
+    use tokio::signal::unix::{signal, SignalKind};
+    let mut sigterm = signal(SignalKind::terminate()).expect("failed to install SIGTERM handler");
+    let mut sigint = signal(SignalKind::interrupt()).expect("failed to install SIGINT handler");
+    tokio::select! {
+        _ = sigterm.recv() => tracing::info!("received SIGTERM, shutting down"),
+        _ = sigint.recv() => tracing::info!("received SIGINT, shutting down"),
+    }
 }
