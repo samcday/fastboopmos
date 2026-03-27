@@ -929,7 +929,9 @@ async fn release_asset_handler(
         .map_err(|_| AppError::not_found())?;
 
     if start > 0 {
-        file.seek(std::io::SeekFrom::Start(start)).await.ok();
+        file.seek(std::io::SeekFrom::Start(start))
+            .await
+            .map_err(|e| AppError(StatusCode::INTERNAL_SERVER_ERROR, format!("seek: {e}")))?;
     }
 
     let stream = tokio_util::io::ReaderStream::new(file.take(length));
