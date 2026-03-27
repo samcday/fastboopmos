@@ -70,7 +70,7 @@ impl Config {
             github_owner: env_or("GITHUB_OWNER", "samcday"),
             github_repo: env_or("GITHUB_REPO", "fastboopmos"),
             github_token: env_or("GITHUB_TOKEN", ""),
-            edge_artifact_id: env_or("EDGE_CHANNEL_ARTIFACT_ID", ""),
+            edge_artifact_id: env_or("EDGE_CHANNEL_ARTIFACT_ID", "").trim().to_string(),
             asset_name: env_or("ASSET_NAME", "edge.channel"),
             sha256_asset_name: env_or("SHA256_ASSET_NAME", "edge.channel.sha256"),
         }
