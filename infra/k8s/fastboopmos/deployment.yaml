@@ -16,31 +16,33 @@ spec:
     metadata:
       labels:
         app: fastboopmos
-      annotations:
-        fastboopmos.samcday.com/caddy-config-rev: "20260319-1"
     spec:
       containers:
-        - name: caddy
-          image: docker.io/caddy:2.10.2
-          command:
-            - /usr/bin/caddy
-          args:
-            - run
-            - --config
-            - /etc/caddy/Caddyfile
-            - --adapter
-            - caddyfile
+        - name: frontdoor
+          image: ghcr.io/samcday/fastboopmos-frontdoor:latest
+          envFrom:
+            - configMapRef:
+                name: fastboopmos-frontdoor-config
+          env:
+            - name: GITHUB_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: fastboopmos-release
+                  key: token
+                  optional: true
           ports:
             - name: http
-              containerPort: 80
+              containerPort: 8080
               protocol: TCP
           readinessProbe:
-            tcpSocket:
+            httpGet:
+              path: /healthz
               port: http
             initialDelaySeconds: 3
             periodSeconds: 10
           livenessProbe:
-            tcpSocket:
+            httpGet:
+              path: /healthz
               port: http
             initialDelaySeconds: 10
             periodSeconds: 20
@@ -49,13 +51,13 @@ spec:
               cpu: 25m
               memory: 32Mi
             limits:
-              cpu: 250m
-              memory: 128Mi
+              cpu: 2
+              memory: 2Gi
           volumeMounts:
-            - name: config
-              mountPath: /etc/caddy/Caddyfile
-              subPath: Caddyfile
+            - name: cache
+              mountPath: /cache
       volumes:
-        - name: config
-          configMap:
-            name: fastboopmos-caddy
+        - name: cache
+          hostPath:
+            path: /var/cache/fastboopmos
+            type: DirectoryOrCreate
