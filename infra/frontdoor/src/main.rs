@@ -350,17 +350,23 @@ fn extract_single_file_from_zip(
         .filter(|&i| {
             archive
                 .by_index(i)
-                .map(|e| !e.is_dir())
+                .map(|e| {
+                    !e.is_dir() && !e.name().ends_with(".sha256") && !e.name().ends_with(".sha256sum")
+                })
                 .unwrap_or(false)
         })
         .collect();
 
     if file_indices.len() != 1 {
+        let all_names: Vec<String> = (0..archive.len())
+            .filter_map(|i| archive.by_index(i).ok().map(|e| e.name().to_string()))
+            .collect();
         return Err(AppError(
             StatusCode::CONFLICT,
             format!(
-                "artifact archive contains {} files; expected exactly 1",
-                file_indices.len()
+                "artifact archive contains {} non-checksum files; expected exactly 1 (files: {})",
+                file_indices.len(),
+                all_names.join(", "),
             ),
         ));
     }
