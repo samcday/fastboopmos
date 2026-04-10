@@ -810,29 +810,77 @@ async fn gha_handler(
     }
 
     let entry = gha_materialize(&state, &run_id).await?;
+    let size = entry.size;
 
-    let builder = Response::builder()
-        .status(StatusCode::OK)
+    // Range request
+    let range_header = req
+        .headers()
+        .get(header::RANGE)
+        .and_then(|v| v.to_str().ok())
+        .map(|s| s.to_string());
+
+    let (status, start, end) = if let Some(ref range_str) = range_header {
+        match parse_single_byte_range(range_str, size) {
+            Ok((s, e)) => (StatusCode::PARTIAL_CONTENT, s, e),
+            Err(()) => {
+                return Ok(Response::builder()
+                    .status(StatusCode::RANGE_NOT_SATISFIABLE)
+                    .header("cache-control", "public, max-age=31536000, immutable")
+                    .header("accept-ranges", "bytes")
+                    .header("content-range", format!("bytes */{size}"))
+                    .header("content-length", "0")
+                    .header("access-control-allow-origin", "*")
+                    .header("access-control-allow-methods", "GET, HEAD, OPTIONS")
+                    .header("access-control-allow-headers", "Content-Type, Range")
+                    .header(
+                        "access-control-expose-headers",
+                        "Content-Length, Content-Range, ETag, Accept-Ranges",
+                    )
+                    .body(Body::empty())
+                    .unwrap());
+            }
+        }
+    } else {
+        (StatusCode::OK, 0u64, size.saturating_sub(1))
+    };
+
+    let length = end - start + 1;
+
+    let mut builder = Response::builder()
+        .status(status)
         .header("cache-control", "public, max-age=31536000, immutable")
+        .header("accept-ranges", "bytes")
         .header("content-type", &entry.content_type)
-        .header("content-length", entry.size.to_string())
+        .header("content-length", length.to_string())
         .header("etag", &entry.etag)
         .header("access-control-allow-origin", "*")
         .header("access-control-allow-methods", "GET, HEAD, OPTIONS")
-        .header("access-control-allow-headers", "Content-Type")
-        .header("access-control-expose-headers", "Content-Length, ETag");
+        .header("access-control-allow-headers", "Content-Type, Range")
+        .header(
+            "access-control-expose-headers",
+            "Content-Length, Content-Range, ETag, Accept-Ranges",
+        );
+
+    if status == StatusCode::PARTIAL_CONTENT {
+        builder = builder.header("content-range", format!("bytes {start}-{end}/{size}"));
+    }
 
     if *req.method() == Method::HEAD {
         return Ok(builder.body(Body::empty()).unwrap());
     }
 
-    let file = tokio::fs::File::open(&entry.blob_path)
+    let mut file = tokio::fs::File::open(&entry.blob_path)
         .await
         .map_err(|e| AppError(StatusCode::INTERNAL_SERVER_ERROR, format!("open: {e}")))?;
 
-    Ok(builder
-        .body(Body::from_stream(tokio_util::io::ReaderStream::new(file)))
-        .unwrap())
+    if start > 0 {
+        file.seek(std::io::SeekFrom::Start(start))
+            .await
+            .map_err(|e| AppError(StatusCode::INTERNAL_SERVER_ERROR, format!("seek: {e}")))?;
+    }
+
+    let stream = tokio_util::io::ReaderStream::new(file.take(length));
+    Ok(builder.body(Body::from_stream(stream)).unwrap())
 }
 
 async fn gha_options_handler() -> Response {
@@ -840,8 +888,11 @@ async fn gha_options_handler() -> Response {
         .status(StatusCode::NO_CONTENT)
         .header("access-control-allow-origin", "*")
         .header("access-control-allow-methods", "GET, HEAD, OPTIONS")
-        .header("access-control-allow-headers", "Content-Type")
-        .header("access-control-expose-headers", "Content-Length, ETag")
+        .header("access-control-allow-headers", "Content-Type, Range")
+        .header(
+            "access-control-expose-headers",
+            "Content-Length, Content-Range, ETag, Accept-Ranges",
+        )
         .header("access-control-max-age", "86400")
         .header("content-length", "0")
         .body(Body::empty())
