@@ -486,6 +486,14 @@ def write_channel(bootpro_paths: list[Path], output: Path) -> None:
             channel.write(bootpro_path.read_bytes())
 
 
+def index_channel(fastboop: str, raw_channel: Path, output: Path) -> None:
+    output.parent.mkdir(parents=True, exist_ok=True)
+    subprocess.run(
+        [fastboop, "channel", "index", str(raw_channel), "-o", str(output)],
+        check=True,
+    )
+
+
 def main() -> int:
     args = parse_args()
     templates_dir = Path(args.templates_dir)
@@ -533,7 +541,10 @@ def main() -> int:
                 )
                 selected_bootpros.append(bootpro)
 
-        write_channel(selected_bootpros, output)
+        with tempfile.TemporaryDirectory(prefix="channel-build-") as temp_dir:
+            raw_channel = Path(temp_dir) / "raw.channel"
+            write_channel(selected_bootpros, raw_channel)
+            index_channel(args.fastboop, raw_channel, output)
     except Exception as err:
         print(f"error: {err}", file=sys.stderr)
         return 1
