@@ -30,7 +30,7 @@ Plus device-specific stage0 config (kernel cmdline, dtb path, dt overlays).
 ### CI invocation
 
 `.github/workflows/channel-build.yml`:
-- Downloads `fastboop` v0.0.1-rc.11 binary from GitHub releases
+- Downloads `fastboop` v0.0.1-rc.15 binary from GitHub releases
 - Runs: `python scripts/build_channel.py --fastboop ./bin/fastboop --cache-bucket $BUCKET ...`
 - Uploads `dist/edge.channel` + `dist/edge.channel.sha256` as workflow artifacts
 - Commits updated artifact ID to `infra/k8s/fastboopmos/latest.txt`
@@ -68,7 +68,7 @@ fastboopmos/
 
 ### Consuming fastboop as a library
 
-`fastboop-core` (v0.0.1-rc.12) is published to crates.io and exports:
+`fastboop-core` (v0.0.1-rc.15) is published to crates.io and exports:
 - `BootProfileManifest` — deserialized from YAML manifest
 - `encode_boot_profile()` — compiles manifest to binary `.bootpro`
 - `validate_boot_profile()` — validates before encoding

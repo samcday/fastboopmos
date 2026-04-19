@@ -23,7 +23,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     env:
-      FASTBOOP_VERSION: 0.0.1-rc.14
+      FASTBOOP_VERSION: 0.0.1-rc.15
       CACHE_BUCKET: ${{ secrets.FASTBOOPMOS_CACHE_BUCKET }}
       CACHE_ENDPOINT_URL: ${{ vars.FASTBOOPMOS_CACHE_ENDPOINT_URL }}
       CACHE_PREFIX: ${{ vars.FASTBOOPMOS_CACHE_PREFIX || 'fastboopmos' }}
