@@ -1,18 +1,27 @@
 # fastboopmos
 
-A set of [BootProfiles][] to enable live-booting official postmarketOS artifacts with [fastboop][].
+Live boot (without flashing) the latest postmarketOS edge release on your pocket computer, from a web browser.
 
-Soon, you will be able to boot postmarketOS from the browser: https://www.fastboop.win/?channel=https://fastboopmos.samcday.com/edge.channel (Not yet, see [this issue][pmos-225])
+Get started now: https://www.fastboop.win/v0.0.1-rc.15/?channel=https://fastboopmos.samcday.com/edge.channel
 
-For now, you must use the [fastboop CLI][quickstart]:
+The following devices are supported so far:
+
+ * Google Pixel 3a
+ * OnePlus 6(T)
+ * Xiaomi POCO F1
+
+You can also use the [fastboop CLI][quickstart]:
 
 ```sh
 fastboop boot --serial https://fastboopmos.samcday.com/edge.channel
 ```
+
+---
+
+A set of [BootProfiles][] to enable live-booting official postmarketOS artifacts with [fastboop][].
 
 Wanna peek under the hood? [Cool.](./HACKING.md)
 
 [fastboop]: https://github.com/samcday/fastboop
 [quickstart]: http://docs.fastboop.win/user/#quickstart
 [BootProfiles]: http://docs.fastboop.win/dev/BOOT_PROFILES/
-[pmos-225]: https://gitlab.postmarketos.org/postmarketOS/postmarketos.org/-/work_items/225
