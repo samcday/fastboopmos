@@ -23,6 +23,16 @@ values from `https://images.postmarketos.org/bpo/index.json`:
 
 The same template is rendered once per discovered UI variant for that device.
 
+## Device profiles
+
+`devprofiles/*.yaml` holds DevProfile sources for devices that don't (yet) have
+a built-in profile shipped by fastboop. Each YAML is encoded as a `.devpro` and
+concatenated into the channel ahead of the bootprofiles, so the channel index
+picks them up as head records and anything consuming the channel sees them the
+same way it sees built-ins.
+
+Remove a file from that directory once a built-in lands upstream.
+
 ## Cache model
 
 The allPublic B2 bucket (`samcday-fastboopmos`) is a memoization cache for
