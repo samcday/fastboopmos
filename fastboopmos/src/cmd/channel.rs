@@ -4,7 +4,7 @@ use std::path::{Path, PathBuf};
 use crate::channel as channel_writer;
 use crate::cli::{ChannelArgs, Cli};
 use crate::compile::{self, EnsureMode};
-use crate::{index, template};
+use crate::{devprofile, index, template};
 
 pub async fn run(http: &reqwest::Client, top: &Cli, args: &ChannelArgs) -> Result<()> {
     let templates = index::collect_templates(&top.templates_dir)
@@ -78,7 +78,28 @@ pub async fn run(http: &reqwest::Client, top: &Cli, args: &ChannelArgs) -> Resul
         anyhow::bail!("no bootpros selected; refusing to write empty channel");
     }
 
-    channel_writer::write_indexed_channel(&bootpros, &args.output)
+    let mut devpros: Vec<PathBuf> = Vec::new();
+    for (device_id, source_path) in devprofile::collect_sources(&args.devprofiles_dir)
+        .with_context(|| {
+            format!(
+                "collecting devprofiles from {}",
+                args.devprofiles_dir.display()
+            )
+        })?
+    {
+        let devpro = args.devpro_build_dir.join(format!("{device_id}.devpro"));
+        devprofile::compile(&source_path, &devpro)
+            .await
+            .with_context(|| format!("compiling devprofile {}", source_path.display()))?;
+        tracing::info!(device_id = %device_id, path = %devpro.display(), "compiled devprofile");
+        devpros.push(devpro);
+    }
+
+    let mut records = Vec::with_capacity(devpros.len() + bootpros.len());
+    records.extend(devpros);
+    records.extend(bootpros);
+
+    channel_writer::write_indexed_channel(&records, &args.output)
         .await
         .with_context(|| format!("writing channel to {}", args.output.display()))?;
 

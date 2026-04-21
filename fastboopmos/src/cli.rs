@@ -80,6 +80,12 @@ pub struct ChannelArgs {
     #[arg(long, default_value = "build/pmos-bootpros")]
     pub bootpro_cache_dir: PathBuf,
 
+    #[arg(long, default_value = "devprofiles")]
+    pub devprofiles_dir: PathBuf,
+
+    #[arg(long, default_value = "build/pmos-devpros")]
+    pub devpro_build_dir: PathBuf,
+
     #[arg(long, default_value = "dist/edge.channel")]
     pub output: PathBuf,
 
