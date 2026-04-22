@@ -35,10 +35,7 @@ pub fn run() {
     .expect("failed to create file watcher");
 
     watcher
-        .watch(
-            Path::new("infra/frontdoor/src"),
-            RecursiveMode::Recursive,
-        )
+        .watch(Path::new("infra/frontdoor/src"), RecursiveMode::Recursive)
         .expect("failed to watch infra/frontdoor/src");
 
     eprintln!("watching infra/frontdoor/src/ for changes...");

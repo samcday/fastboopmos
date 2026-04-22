@@ -89,7 +89,9 @@ pub async fn ensure_cached(
 
     if size != image_size {
         let _ = tokio::fs::remove_file(&temp_path).await;
-        bail!("downloaded artifact size mismatch for {image_url}: expected {image_size}, got {size}");
+        bail!(
+            "downloaded artifact size mismatch for {image_url}: expected {image_size}, got {size}"
+        );
     }
     let actual = hex::encode(hasher.finalize());
     if !actual.eq_ignore_ascii_case(image_sha512) {
@@ -186,12 +188,8 @@ mod tests {
 
     #[test]
     fn cached_artifact_path_no_extension() {
-        let path = cached_artifact_path(
-            "https://example.invalid/image",
-            "abc",
-            Path::new("/c"),
-        )
-        .unwrap();
+        let path =
+            cached_artifact_path("https://example.invalid/image", "abc", Path::new("/c")).unwrap();
         assert_eq!(path, PathBuf::from("/c/abc"));
     }
 }

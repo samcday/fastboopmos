@@ -61,12 +61,8 @@ mod tests {
 
     #[test]
     fn renders_target_name_variant() {
-        let out = render_manifest(
-            "id: {{ target_name }}\n",
-            "edge",
-            &sample(Some("factory")),
-        )
-        .unwrap();
+        let out =
+            render_manifest("id: {{ target_name }}\n", "edge", &sample(Some("factory"))).unwrap();
         assert_eq!(out, "id: oneplus-fajita-factory\n");
     }
 

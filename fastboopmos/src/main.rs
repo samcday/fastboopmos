@@ -9,7 +9,9 @@ use fastboopmos::{channel, compile, index, template};
 #[tokio::main]
 async fn main() -> Result<()> {
     tracing_subscriber::fmt()
-        .with_env_filter(EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info")))
+        .with_env_filter(
+            EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info")),
+        )
         .with_target(false)
         .init();
 
@@ -40,7 +42,12 @@ async fn main() -> Result<()> {
 
     let release = index::fetch_release(&http, &args.index_url, &args.release)
         .await
-        .with_context(|| format!("fetching release {:?} from {}", args.release, args.index_url))?;
+        .with_context(|| {
+            format!(
+                "fetching release {:?} from {}",
+                args.release, args.index_url
+            )
+        })?;
     let release_name = release
         .get("name")
         .and_then(|v| v.as_str())
@@ -49,7 +56,12 @@ async fn main() -> Result<()> {
 
     let fastboop_ver = compile::fastboop_version(&args.fastboop)
         .await
-        .with_context(|| format!("determining fastboop version from {}", args.fastboop.display()))?;
+        .with_context(|| {
+            format!(
+                "determining fastboop version from {}",
+                args.fastboop.display()
+            )
+        })?;
     tracing::info!(version = %fastboop_ver, "using fastboop");
 
     let mut selected_bootpros: Vec<PathBuf> = Vec::new();
@@ -61,8 +73,10 @@ async fn main() -> Result<()> {
             .with_context(|| format!("selecting rootfs images for {pmos_device}"))?;
 
         for selection in selections {
-            let manifest_content = template::render_manifest(&template_text, &release_name, &selection)
-                .with_context(|| format!("rendering manifest for {}", selection.target_name()))?;
+            let manifest_content =
+                template::render_manifest(&template_text, &release_name, &selection).with_context(
+                    || format!("rendering manifest for {}", selection.target_name()),
+                )?;
             let bootpro = compile::ensure_bootpro(
                 &http,
                 &args.fastboop,

@@ -263,7 +263,10 @@ mod tests {
     #[test]
     fn variant_bare() {
         assert_eq!(
-            rootfs_variant("20260101-0000-postmarketOS-v24.06-plasma-mobile-5-oneplus-fajita.img.xz", "oneplus-fajita"),
+            rootfs_variant(
+                "20260101-0000-postmarketOS-v24.06-plasma-mobile-5-oneplus-fajita.img.xz",
+                "oneplus-fajita"
+            ),
             Some(String::new())
         );
     }
@@ -271,7 +274,10 @@ mod tests {
     #[test]
     fn variant_named() {
         assert_eq!(
-            rootfs_variant("20260101-0000-postmarketOS-v24.06-plasma-mobile-5-oneplus-fajita-factory.img.xz", "oneplus-fajita"),
+            rootfs_variant(
+                "20260101-0000-postmarketOS-v24.06-plasma-mobile-5-oneplus-fajita-factory.img.xz",
+                "oneplus-fajita"
+            ),
             Some("factory".to_string())
         );
     }
@@ -279,7 +285,10 @@ mod tests {
     #[test]
     fn variant_boot_excluded() {
         assert_eq!(
-            rootfs_variant("20260101-0000-postmarketOS-v24.06-plasma-mobile-5-oneplus-fajita-boot.img.xz", "oneplus-fajita"),
+            rootfs_variant(
+                "20260101-0000-postmarketOS-v24.06-plasma-mobile-5-oneplus-fajita-boot.img.xz",
+                "oneplus-fajita"
+            ),
             None
         );
         assert_eq!(
@@ -291,13 +300,19 @@ mod tests {
     #[test]
     fn variant_not_rootfs() {
         assert_eq!(rootfs_variant("something.zip", "oneplus-fajita"), None);
-        assert_eq!(rootfs_variant("no-device-here.img.xz", "oneplus-fajita"), None);
+        assert_eq!(
+            rootfs_variant("no-device-here.img.xz", "oneplus-fajita"),
+            None
+        );
     }
 
     #[test]
     fn variant_trailing_marker_only() {
         // name ends with marker then ".img.xz" — extracted variant is empty => None
-        assert_eq!(rootfs_variant("xx-oneplus-fajita-.img.xz", "oneplus-fajita"), None);
+        assert_eq!(
+            rootfs_variant("xx-oneplus-fajita-.img.xz", "oneplus-fajita"),
+            None
+        );
     }
 
     #[test]
