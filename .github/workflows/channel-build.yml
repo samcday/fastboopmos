@@ -34,77 +34,49 @@ jobs:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
-      - name: Set up Python
-        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6
-        with:
-          python-version: "3.12"
+      - name: Set up Rust toolchain + cache
+        uses: actions-rust-lang/setup-rust-toolchain@1fbea72663f6d4c03efaab13560c8a24cfd2a7cc # v1.9.0
 
-      - name: Install Python deps
-        run: |
-          python -m pip install --upgrade pip
-          pip install jinja2
+      - name: Build fastboopmos
+        run: cargo build --release --locked -p fastboopmos
 
       - name: Download fastboop CLI release
         run: |
-          python - <<'PY'
-          import io
-          import os
-          import stat
-          import tarfile
-          import urllib.request
-          from pathlib import Path
+          set -euo pipefail
+          tmp=$(mktemp -d)
+          curl -fsSL "https://github.com/samcday/fastboop/releases/download/v${FASTBOOP_VERSION}/fastboop-cli-x86_64-unknown-linux-musl.tar.gz" \
+            | tar -xz -C "$tmp"
+          mkdir -p bin
+          install -m 0755 "$(find "$tmp" -type f -name fastboop)" bin/fastboop
+          rm -rf "$tmp"
 
-          version = os.environ["FASTBOOP_VERSION"]
-          url = (
-              "https://github.com/samcday/fastboop/releases/download/"
-              f"v{version}/fastboop-cli-x86_64-unknown-linux-musl.tar.gz"
-          )
-
-          data = urllib.request.urlopen(url).read()
-          out_dir = Path("bin")
-          out_dir.mkdir(parents=True, exist_ok=True)
-
-          with tarfile.open(fileobj=io.BytesIO(data), mode="r:gz") as archive:
-              member = next(
-                  (
-                      m
-                      for m in archive.getmembers()
-                      if m.isfile() and Path(m.name).name == "fastboop"
-                  ),
-                  None,
-              )
-              if member is None:
-                  raise RuntimeError("fastboop binary not found in release archive")
-
-              extracted = archive.extractfile(member)
-              if extracted is None:
-                  raise RuntimeError("failed to extract fastboop binary")
-
-              output = out_dir / "fastboop"
-              output.write_bytes(extracted.read())
-              output.chmod(output.stat().st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
-          PY
-
-      - name: Build channel from index + templates + cache
+      - name: Build channel
         run: |
-          DEVICE_INPUT="${{ github.event.inputs.device || '' }}"
+          set -euo pipefail
           : "${CACHE_BUCKET:?missing FASTBOOPMOS_CACHE_BUCKET secret}"
           : "${CACHE_ENDPOINT_URL:?missing FASTBOOPMOS_CACHE_ENDPOINT_URL variable}"
-          : "${AWS_ACCESS_KEY_ID:?missing FASTBOOPMOS_CACHE_ACCESS_KEY_ID secret}"
-          : "${AWS_SECRET_ACCESS_KEY:?missing FASTBOOPMOS_CACHE_SECRET_ACCESS_KEY secret}"
 
+          DEVICE_INPUT="${{ github.event.inputs.device || '' }}"
           args=(
-            scripts/build_channel.py
             --fastboop ./bin/fastboop
-            --cache-bucket "$CACHE_BUCKET"
-            --cache-endpoint-url "$CACHE_ENDPOINT_URL"
-            --cache-prefix "$CACHE_PREFIX"
+            --cache-url "${CACHE_ENDPOINT_URL%/}/${CACHE_BUCKET}/${CACHE_PREFIX}"
             --output dist/edge.channel
           )
           if [ -n "$DEVICE_INPUT" ]; then
             args+=(--only-device "$DEVICE_INPUT")
           fi
-          python "${args[@]}"
+          ./target/release/fastboopmos "${args[@]}"
+
+      - name: Push new bootpros to cache
+        run: |
+          set -euo pipefail
+          : "${AWS_ACCESS_KEY_ID:?missing FASTBOOPMOS_CACHE_ACCESS_KEY_ID secret}"
+          : "${AWS_SECRET_ACCESS_KEY:?missing FASTBOOPMOS_CACHE_SECRET_ACCESS_KEY secret}"
+
+          aws s3 sync --size-only \
+            --endpoint-url "$CACHE_ENDPOINT_URL" \
+            build/pmos-bootpros/ \
+            "s3://$CACHE_BUCKET/$CACHE_PREFIX/edge/bootpro/"
 
       - name: Write channel metadata
         run: |

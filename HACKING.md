@@ -7,8 +7,8 @@ Each supported pmOS device is represented by a top-level Jinja2 template:
 - `oneplus-enchilada.yaml`
 - `oneplus-fajita.yaml`
 
-Templates render a full BootProfile manifest. The script injects runtime values from
-`https://images.postmarketos.org/bpo/index.json`:
+Templates render a full BootProfile manifest. `fastboopmos` injects runtime
+values from `https://images.postmarketos.org/bpo/index.json`:
 
 - `release_name`
 - `pmos_device`
@@ -25,43 +25,47 @@ The same template is rendered once per discovered UI variant for that device.
 
 ## Cache model
 
-The S3/B2 bucket is a memoization cache for compiled hint-bearing `.bootpro` artifacts.
+The allPublic B2 bucket (`samcday-fastboopmos`) is a memoization cache for
+compiled hint-bearing `.bootpro` artifacts.
 
 - Key format: `<prefix>/<release>/bootpro/<artifact_sha512>-<scope_hash>.bootpro`
 - `scope_hash` is derived from rendered manifest content + fastboop version
-- If key exists: CI downloads and reuses it
-- If key is missing: CI compiles from source artifact, uploads once, then reuses
+- Reads: `fastboopmos` does a plain HTTP GET against the public endpoint; on
+  200 the cache entry is reused, on 404 it compiles locally
+- Writes: CI pushes newly-compiled entries back to B2 via `aws s3 sync
+  --size-only` — credentials only needed for this side
 
 No generated manifests or `.bootpro` files are committed to git.
 
-## Local run (same logic as CI)
+## Local run
+
+Read-only against the public cache (no AWS credentials needed):
 
 ```bash
-python scripts/build_channel.py \
+cargo run -p fastboopmos --release -- \
   --fastboop /path/to/fastboop \
-  --cache-bucket your-bucket \
-  --cache-endpoint-url https://s3.eu-central-003.backblazeb2.com \
-  --cache-prefix fastboopmos \
   --output dist/edge.channel
 ```
 
-Optional targeted device run:
+Targeted to a single device:
 
 ```bash
-python scripts/build_channel.py \
+cargo run -p fastboopmos --release -- \
   --fastboop /path/to/fastboop \
-  --cache-bucket your-bucket \
-  --cache-endpoint-url https://s3.eu-central-003.backblazeb2.com \
   --only-device oneplus-fajita \
   --output dist/edge.channel
 ```
+
+`--cache-url` defaults to the public bucket; pass `--cache-url ""` (or set
+`FASTBOOPMOS_CACHE_URL=`) to force a cold compile of everything.
 
 ## Automation
 
 - `.github/workflows/channel-build.yml`
   - runs on PRs, pushes to `main`, nightly, and manual dispatch
   - supports optional `device` input for targeted runs
-  - ensures bootpro cache keys exist for selected artifacts
-  - assembles `dist/edge.channel` from cached bootpros
+  - runs `fastboopmos` to assemble `dist/edge.channel`, then `aws s3 sync`
+    pushes any newly-compiled bootpros back to B2
   - uploads workflow artifact every run
-  - on `push` to `main` and nightly schedule, updates `infra/k8s/fastboopmos/latest.txt` to the new artifact id
+  - on `push` to `main` and nightly schedule, updates
+    `infra/k8s/fastboopmos/latest.txt` to the new artifact id
