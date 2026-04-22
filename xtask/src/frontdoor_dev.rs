@@ -26,10 +26,10 @@ pub fn run() {
 
     let (tx, rx) = mpsc::channel();
     let mut watcher = notify::recommended_watcher(move |res: notify::Result<notify::Event>| {
-        if let Ok(event) = res {
-            if event.kind.is_modify() || event.kind.is_create() || event.kind.is_remove() {
-                let _ = tx.send(());
-            }
+        if let Ok(event) = res
+            && (event.kind.is_modify() || event.kind.is_create() || event.kind.is_remove())
+        {
+            let _ = tx.send(());
         }
     })
     .expect("failed to create file watcher");
@@ -119,20 +119,16 @@ fn serve(edge_artifact_id: &str, cache_dir: &str) -> Child {
     if let Some(stdout) = child.stdout.take() {
         std::thread::spawn(move || {
             let reader = BufReader::new(stdout);
-            for line in reader.lines() {
-                if let Ok(line) = line {
-                    eprintln!("{line}");
-                }
+            for line in reader.lines().map_while(Result::ok) {
+                eprintln!("{line}");
             }
         });
     }
     if let Some(stderr) = child.stderr.take() {
         std::thread::spawn(move || {
             let reader = BufReader::new(stderr);
-            for line in reader.lines() {
-                if let Ok(line) = line {
-                    eprintln!("{line}");
-                }
+            for line in reader.lines().map_while(Result::ok) {
+                eprintln!("{line}");
             }
         });
     }

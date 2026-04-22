@@ -36,6 +36,11 @@ jobs:
 
       - name: Set up Rust toolchain + cache
         uses: actions-rust-lang/setup-rust-toolchain@1fbea72663f6d4c03efaab13560c8a24cfd2a7cc # v1.9.0
+        with:
+          components: clippy
+
+      - name: Clippy
+        run: cargo clippy --workspace --all-targets --locked -- -D warnings
 
       - name: Build fastboopmos
         run: cargo build --release --locked -p fastboopmos
