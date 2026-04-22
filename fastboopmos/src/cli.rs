@@ -30,4 +30,15 @@ pub struct Args {
 
     #[arg(long, default_value = "dist/edge.channel")]
     pub output: PathBuf,
+
+    /// Base URL to fetch pre-built `.bootpro` cache entries over HTTP before
+    /// compiling. Expected to serve keys at
+    /// `{cache_url}/{release}/bootpro/{sha512}-{scope}.bootpro` (public-read).
+    /// Pass an empty string to disable the HTTP cache.
+    #[arg(
+        long,
+        env = "FASTBOOPMOS_CACHE_URL",
+        default_value = "https://s3.eu-central-003.backblazeb2.com/samcday-fastboopmos/fastboopmos"
+    )]
+    pub cache_url: String,
 }

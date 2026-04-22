@@ -1,10 +1,15 @@
 use anyhow::{Context, Result, bail};
+use futures_util::StreamExt;
 use sha2::{Digest, Sha256};
 use std::path::{Path, PathBuf};
+use std::time::Duration;
+use tokio::io::AsyncWriteExt;
 use tokio::process::Command;
 
 use crate::artifact;
 use crate::index::RootfsSelection;
+
+const HTTP_CACHE_TIMEOUT: Duration = Duration::from_secs(30);
 
 pub async fn fastboop_version(fastboop: &Path) -> Result<String> {
     let output = Command::new(fastboop)
@@ -39,24 +44,104 @@ pub fn scope_hash(manifest_content: &str, fastboop_ver: &str) -> String {
     hex::encode(digest)[..24].to_string()
 }
 
+/// GET the bootpro from a public HTTP cache if present. Returns Ok(true) on
+/// 200 (file written to `destination`), Ok(false) on 404 or any transient
+/// failure (so the caller falls through to a local compile).
+async fn try_fetch_remote_bootpro(
+    http: &reqwest::Client,
+    cache_url: &str,
+    release_name: &str,
+    filename: &str,
+    destination: &Path,
+) -> Result<bool> {
+    let base = cache_url.trim_end_matches('/');
+    let url = format!("{base}/{release_name}/bootpro/{filename}");
+    tracing::debug!(url = %url, "trying HTTP cache");
+
+    let resp = match http.get(&url).timeout(HTTP_CACHE_TIMEOUT).send().await {
+        Ok(r) => r,
+        Err(e) => {
+            tracing::warn!(url = %url, error = %e, "HTTP cache request failed, falling back to compile");
+            return Ok(false);
+        }
+    };
+
+    match resp.status() {
+        reqwest::StatusCode::OK => {}
+        reqwest::StatusCode::NOT_FOUND => return Ok(false),
+        s => {
+            tracing::warn!(url = %url, status = %s, "HTTP cache returned unexpected status, falling back to compile");
+            return Ok(false);
+        }
+    }
+
+    if let Some(parent) = destination.parent() {
+        tokio::fs::create_dir_all(parent).await?;
+    }
+    let mut temp_filename = destination
+        .file_name()
+        .context("destination has no file name")?
+        .to_os_string();
+    temp_filename.push(".tmp");
+    let temp_path = destination.with_file_name(temp_filename);
+
+    let mut stream = resp.bytes_stream();
+    let mut file = tokio::fs::File::create(&temp_path)
+        .await
+        .with_context(|| format!("creating {}", temp_path.display()))?;
+    while let Some(chunk) = stream.next().await {
+        let chunk = match chunk {
+            Ok(c) => c,
+            Err(e) => {
+                tracing::warn!(url = %url, error = %e, "HTTP cache stream broke mid-download, falling back to compile");
+                drop(file);
+                let _ = tokio::fs::remove_file(&temp_path).await;
+                return Ok(false);
+            }
+        };
+        file.write_all(&chunk)
+            .await
+            .with_context(|| format!("writing to {}", temp_path.display()))?;
+    }
+    file.flush().await?;
+    file.sync_all().await?;
+    drop(file);
+
+    tokio::fs::rename(&temp_path, destination).await.with_context(|| {
+        format!(
+            "renaming {} -> {}",
+            temp_path.display(),
+            destination.display()
+        )
+    })?;
+    Ok(true)
+}
+
 #[allow(clippy::too_many_arguments)]
 pub async fn ensure_bootpro(
     http: &reqwest::Client,
     fastboop: &Path,
     fastboop_ver: &str,
+    release_name: &str,
+    cache_url: Option<&str>,
     manifest_content: &str,
     selection: &RootfsSelection,
     artifact_cache_dir: &Path,
     bootpro_cache_dir: &Path,
 ) -> Result<PathBuf> {
     let scope = scope_hash(manifest_content, fastboop_ver);
-    let output_path = bootpro_cache_dir.join(format!(
-        "{}-{}.bootpro",
-        selection.image_sha512, scope
-    ));
+    let filename = format!("{}-{}.bootpro", selection.image_sha512, scope);
+    let output_path = bootpro_cache_dir.join(&filename);
 
     if tokio::fs::try_exists(&output_path).await? {
-        tracing::info!(target = %selection.target_name(), path = %output_path.display(), "bootpro cache hit");
+        tracing::info!(target = %selection.target_name(), path = %output_path.display(), "bootpro local cache hit");
+        return Ok(output_path);
+    }
+
+    if let Some(base) = cache_url
+        && try_fetch_remote_bootpro(http, base, release_name, &filename, &output_path).await?
+    {
+        tracing::info!(target = %selection.target_name(), path = %output_path.display(), "bootpro HTTP cache hit");
         return Ok(output_path);
     }
 

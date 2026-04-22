@@ -67,6 +67,8 @@ async fn main() -> Result<()> {
                 &http,
                 &args.fastboop,
                 &fastboop_ver,
+                &release_name,
+                Some(args.cache_url.as_str()).filter(|s| !s.is_empty()),
                 &manifest_content,
                 &selection,
                 &artifact_cache_dir,
