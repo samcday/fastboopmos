@@ -19,9 +19,6 @@ pub struct Args {
     #[arg(long, default_value = "edge")]
     pub release: String,
 
-    #[arg(long, default_value = "fastboop")]
-    pub fastboop: PathBuf,
-
     #[arg(long, default_value = "build/pmos-artifacts")]
     pub artifact_cache_dir: PathBuf,
 

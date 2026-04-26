@@ -54,15 +54,8 @@ async fn main() -> Result<()> {
         .context("release is missing a name")?
         .to_string();
 
-    let fastboop_ver = compile::fastboop_version(&args.fastboop)
-        .await
-        .with_context(|| {
-            format!(
-                "determining fastboop version from {}",
-                args.fastboop.display()
-            )
-        })?;
-    tracing::info!(version = %fastboop_ver, "using fastboop");
+    let bootpro_tool_version = env!("FASTBOOP_BOOTPRO_VERSION").to_string();
+    tracing::info!(version = %bootpro_tool_version, "using bootpro compiler");
 
     let mut selected_bootpros: Vec<PathBuf> = Vec::new();
     for (pmos_device, template_path) in selected_templates {
@@ -79,8 +72,7 @@ async fn main() -> Result<()> {
                 )?;
             let bootpro = compile::ensure_bootpro(
                 &http,
-                &args.fastboop,
-                &fastboop_ver,
+                &bootpro_tool_version,
                 &release_name,
                 Some(args.cache_url.as_str()).filter(|s| !s.is_empty()),
                 &manifest_content,
