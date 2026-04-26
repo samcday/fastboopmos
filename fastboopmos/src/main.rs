@@ -94,7 +94,7 @@ async fn main() -> Result<()> {
         }
     }
 
-    channel::write_indexed_channel(&args.fastboop, &selected_bootpros, &output)
+    channel::write_indexed_channel(&selected_bootpros, &output)
         .await
         .with_context(|| format!("writing channel to {}", output.display()))?;
 
