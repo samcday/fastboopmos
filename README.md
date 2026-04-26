@@ -8,6 +8,7 @@ The following devices are supported so far:
 
  * Google Pixel 3a
  * OnePlus 6(T)
+ * Samsung Galaxy Tab A (9.7")
  * Xiaomi POCO F1
 
 You can also use the [fastboop CLI][quickstart]:
