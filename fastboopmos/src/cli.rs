@@ -13,6 +13,10 @@ pub struct Args {
     #[arg(long)]
     pub only_device: Option<String>,
 
+    /// Limit selected rootfs images to a UI/image variant such as phosh or gnome-mobile.
+    #[arg(long)]
+    pub only_variant: Option<String>,
+
     #[arg(long, default_value = "https://images.postmarketos.org/bpo/index.json")]
     pub index_url: String,
 

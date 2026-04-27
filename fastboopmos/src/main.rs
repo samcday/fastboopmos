@@ -62,8 +62,12 @@ async fn main() -> Result<()> {
         let template_text = tokio::fs::read_to_string(&template_path)
             .await
             .with_context(|| format!("reading template {}", template_path.display()))?;
-        let selections = index::select_rootfs_images(&release, &pmos_device)
+        let mut selections = index::select_rootfs_images(&release, &pmos_device)
             .with_context(|| format!("selecting rootfs images for {pmos_device}"))?;
+        if let Some(variant) = args.only_variant.as_deref() {
+            selections = index::filter_rootfs_images_by_variant(selections, variant)
+                .with_context(|| format!("filtering rootfs images for {pmos_device}"))?;
+        }
 
         for selection in selections {
             let manifest_content =

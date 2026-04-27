@@ -1,4 +1,5 @@
 [workspace]
 members = ["fastboopmos", "xtask"]
+default-members = ["fastboopmos"]
 exclude = ["infra/frontdoor"]
 resolver = "2"

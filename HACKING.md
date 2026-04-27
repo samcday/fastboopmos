@@ -51,6 +51,7 @@ Targeted to a single device:
 ```bash
 ./tools/cargo-local.sh run -p fastboopmos --release -- \
   --only-device oneplus-fajita \
+  --only-variant phosh \
   --output dist/edge.channel
 ```
 
