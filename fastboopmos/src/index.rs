@@ -256,9 +256,41 @@ pub fn select_rootfs_images(release: &Value, pmos_device: &str) -> Result<Vec<Ro
     Ok(selections)
 }
 
+pub fn filter_rootfs_images_by_ui(
+    selections: Vec<RootfsSelection>,
+    requested: &str,
+) -> Result<Vec<RootfsSelection>> {
+    let requested = requested.trim();
+    if requested.is_empty() {
+        bail!("--ui must not be empty");
+    }
+
+    let filtered: Vec<RootfsSelection> = selections
+        .into_iter()
+        .filter(|selection| selection.ui_name == requested)
+        .collect();
+    if filtered.is_empty() {
+        bail!("no usable rootfs images found for ui {requested:?}");
+    }
+    Ok(filtered)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn selection(ui_name: &str, variant: Option<&str>) -> RootfsSelection {
+        RootfsSelection {
+            pmos_device: "oneplus-fajita".into(),
+            ui_name: ui_name.into(),
+            variant: variant.map(str::to_string),
+            image_name: "x".into(),
+            image_url: "y".into(),
+            image_sha512: "z".into(),
+            image_size: 1,
+            timestamp: "t".into(),
+        }
+    }
 
     #[test]
     fn variant_bare() {
@@ -317,31 +349,40 @@ mod tests {
 
     #[test]
     fn target_name_bare() {
-        let sel = RootfsSelection {
-            pmos_device: "oneplus-fajita".into(),
-            ui_name: "Plasma Mobile".into(),
-            variant: None,
-            image_name: "x".into(),
-            image_url: "y".into(),
-            image_sha512: "z".into(),
-            image_size: 1,
-            timestamp: "t".into(),
-        };
+        let sel = selection("Plasma Mobile", None);
         assert_eq!(sel.target_name(), "oneplus-fajita");
     }
 
     #[test]
     fn target_name_variant() {
-        let sel = RootfsSelection {
-            pmos_device: "oneplus-fajita".into(),
-            ui_name: "Plasma Mobile".into(),
-            variant: Some("factory".into()),
-            image_name: "x".into(),
-            image_url: "y".into(),
-            image_sha512: "z".into(),
-            image_size: 1,
-            timestamp: "t".into(),
-        };
+        let sel = selection("Plasma Mobile", Some("factory"));
         assert_eq!(sel.target_name(), "oneplus-fajita-factory");
+    }
+
+    #[test]
+    fn filters_rootfs_images_by_ui_name() {
+        let selections = vec![selection("phosh", None), selection("gnome-mobile", None)];
+        let filtered = filter_rootfs_images_by_ui(selections, "phosh").unwrap();
+        assert_eq!(filtered.len(), 1);
+        assert_eq!(filtered[0].ui_name, "phosh");
+    }
+
+    #[test]
+    fn filters_rootfs_images_keeps_all_hw_variants_for_ui() {
+        // Both ebbg and tianma share ui_name="phosh" — filtering on the UI
+        // keeps both, and the per-selection compile loop handles each panel.
+        let selections = vec![
+            selection("phosh", Some("ebbg")),
+            selection("phosh", Some("tianma")),
+            selection("gnome-mobile", Some("ebbg")),
+        ];
+        let filtered = filter_rootfs_images_by_ui(selections, "phosh").unwrap();
+        assert_eq!(filtered.len(), 2);
+    }
+
+    #[test]
+    fn rejects_missing_ui_filter() {
+        let err = filter_rootfs_images_by_ui(vec![selection("phosh", None)], "plasma").unwrap_err();
+        assert!(format!("{err}").contains("no usable rootfs images"));
     }
 }

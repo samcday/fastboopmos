@@ -1,46 +1,28 @@
 use anyhow::{Context, Result, bail};
+use fastboop_bootpro::{BootProfileOptimizeOptions, compile_manifest_yaml_with_optimize};
 use futures_util::StreamExt;
 use sha2::{Digest, Sha256};
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 use tokio::io::AsyncWriteExt;
-use tokio::process::Command;
 
 use crate::artifact;
 use crate::index::RootfsSelection;
 
 const HTTP_CACHE_TIMEOUT: Duration = Duration::from_secs(30);
 
-pub async fn fastboop_version(fastboop: &Path) -> Result<String> {
-    let output = Command::new(fastboop)
-        .arg("--version")
-        .output()
-        .await
-        .with_context(|| format!("running {} --version", fastboop.display()))?;
-    if !output.status.success() {
-        bail!(
-            "failed to determine fastboop version from {}: {}",
-            fastboop.display(),
-            String::from_utf8_lossy(&output.stderr)
-        );
-    }
-    let stdout =
-        String::from_utf8(output.stdout).context("fastboop --version stdout is not UTF-8")?;
-    let first_line = stdout
-        .trim()
-        .lines()
-        .next()
-        .context("fastboop --version returned empty output")?
-        .trim()
-        .to_string();
-    if first_line.is_empty() {
-        bail!("fastboop --version returned empty output");
-    }
-    Ok(first_line)
+#[derive(Copy, Clone, Debug)]
+pub enum EnsureMode {
+    /// Local cache hit → HTTP cache hit → download rootfs and compile locally.
+    Compile,
+    /// Local cache hit → HTTP cache hit → error. Used by `channel` so a
+    /// missing bootpro surfaces as a hard failure instead of silently
+    /// triggering a multi-GB rootfs download.
+    CacheOnly,
 }
 
-pub fn scope_hash(manifest_content: &str, fastboop_ver: &str) -> String {
-    let payload = format!("{fastboop_ver}\n{manifest_content}");
+pub fn scope_hash(manifest_content: &str, bootpro_tool_version: &str) -> String {
+    let payload = format!("{bootpro_tool_version}\n{manifest_content}");
     let digest = Sha256::digest(payload.as_bytes());
     hex::encode(digest)[..24].to_string()
 }
@@ -123,16 +105,16 @@ async fn try_fetch_remote_bootpro(
 #[allow(clippy::too_many_arguments)]
 pub async fn ensure_bootpro(
     http: &reqwest::Client,
-    fastboop: &Path,
-    fastboop_ver: &str,
+    bootpro_tool_version: &str,
     release_name: &str,
     cache_url: Option<&str>,
     manifest_content: &str,
     selection: &RootfsSelection,
     artifact_cache_dir: &Path,
     bootpro_cache_dir: &Path,
+    mode: EnsureMode,
 ) -> Result<PathBuf> {
-    let scope = scope_hash(manifest_content, fastboop_ver);
+    let scope = scope_hash(manifest_content, bootpro_tool_version);
     let filename = format!("{}-{}.bootpro", selection.image_sha512, scope);
     let output_path = bootpro_cache_dir.join(&filename);
 
@@ -148,6 +130,14 @@ pub async fn ensure_bootpro(
         return Ok(output_path);
     }
 
+    if matches!(mode, EnsureMode::CacheOnly) {
+        bail!(
+            "cache-only: bootpro for {} not in local or HTTP cache (key {})",
+            selection.target_name(),
+            filename
+        );
+    }
+
     tracing::info!(target = %selection.target_name(), "bootpro cache miss, compiling");
     let local_artifact = artifact::ensure_cached(
         http,
@@ -158,49 +148,24 @@ pub async fn ensure_bootpro(
     )
     .await?;
 
-    let temp_dir = tempfile::Builder::new()
-        .prefix("bootpro-build-")
-        .tempdir()
-        .context("creating temp dir for bootpro build")?;
-    let manifest_path = temp_dir.path().join("manifest.yaml");
-    let compiled_path = temp_dir.path().join("out.bootpro");
-
-    tokio::fs::write(&manifest_path, manifest_content)
-        .await
-        .with_context(|| format!("writing manifest to {}", manifest_path.display()))?;
-
-    let status = Command::new(fastboop)
-        .arg("bootprofile")
-        .arg("create")
-        .arg(&manifest_path)
-        .arg("-o")
-        .arg(&compiled_path)
-        .arg("--optimize")
-        .arg("--local-artifact")
-        .arg(&local_artifact)
-        .status()
-        .await
-        .with_context(|| format!("invoking {} bootprofile create", fastboop.display()))?;
-    if !status.success() {
-        bail!(
-            "fastboop bootprofile create failed with status {} for {}",
-            status,
-            selection.target_name()
-        );
-    }
+    let (compiled, optimized) = compile_manifest_yaml_with_optimize(
+        manifest_content.as_bytes(),
+        BootProfileOptimizeOptions {
+            local_artifacts: vec![local_artifact],
+            materialized_cache_dir: None,
+        },
+    )
+    .await
+    .with_context(|| format!("compiling bootpro for {}", selection.target_name()))?;
 
     if let Some(parent) = output_path.parent() {
         tokio::fs::create_dir_all(parent).await?;
     }
-    tokio::fs::rename(&compiled_path, &output_path)
+    let mut bytes = compiled.bytes;
+    bytes.extend_from_slice(optimized.bytes.as_slice());
+    tokio::fs::write(&output_path, bytes)
         .await
-        .with_context(|| {
-            format!(
-                "moving compiled bootpro {} -> {}",
-                compiled_path.display(),
-                output_path.display()
-            )
-        })?;
+        .with_context(|| format!("writing compiled bootpro to {}", output_path.display()))?;
     Ok(output_path)
 }
 

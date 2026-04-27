@@ -1,13 +1,8 @@
-use anyhow::{Context, Result, bail};
+use anyhow::{Context, Result, anyhow, bail};
+use fastboop_core::index_channel_bytes;
 use std::path::{Path, PathBuf};
-use tokio::io::AsyncWriteExt;
-use tokio::process::Command;
 
-pub async fn write_indexed_channel(
-    fastboop: &Path,
-    bootpros: &[PathBuf],
-    output: &Path,
-) -> Result<()> {
+pub async fn write_indexed_channel(bootpros: &[PathBuf], output: &Path) -> Result<()> {
     if bootpros.is_empty() {
         bail!("no bootprofiles selected for channel");
     }
@@ -17,36 +12,17 @@ pub async fn write_indexed_channel(
         tokio::fs::create_dir_all(parent).await?;
     }
 
-    let temp_dir = tempfile::Builder::new()
-        .prefix("channel-build-")
-        .tempdir()
-        .context("creating temp dir for channel build")?;
-    let raw_channel = temp_dir.path().join("raw.channel");
-    {
-        let mut channel = tokio::fs::File::create(&raw_channel)
+    let mut raw_channel = Vec::new();
+    for bootpro in bootpros {
+        let bytes = tokio::fs::read(bootpro)
             .await
-            .with_context(|| format!("creating {}", raw_channel.display()))?;
-        for bootpro in bootpros {
-            let bytes = tokio::fs::read(bootpro)
-                .await
-                .with_context(|| format!("reading {}", bootpro.display()))?;
-            channel.write_all(&bytes).await?;
-        }
-        channel.flush().await?;
-        channel.sync_all().await?;
+            .with_context(|| format!("reading {}", bootpro.display()))?;
+        raw_channel.extend_from_slice(bytes.as_slice());
     }
 
-    let status = Command::new(fastboop)
-        .arg("channel")
-        .arg("index")
-        .arg(&raw_channel)
-        .arg("-o")
-        .arg(output)
-        .status()
+    let indexed = index_channel_bytes(raw_channel.as_slice()).map_err(|err| anyhow!("{err}"))?;
+    tokio::fs::write(output, indexed)
         .await
-        .with_context(|| format!("invoking {} channel index", fastboop.display()))?;
-    if !status.success() {
-        bail!("fastboop channel index failed with status {}", status);
-    }
+        .with_context(|| format!("writing indexed channel to {}", output.display()))?;
     Ok(())
 }

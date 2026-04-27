@@ -37,35 +37,72 @@ compiled hint-bearing `.bootpro` artifacts.
 
 No generated manifests or `.bootpro` files are committed to git.
 
+## CLI
+
+`fastboopmos` exposes three subcommands:
+
+- `list` — emit a JSON array of `{device, ui}` entries (drives the GHA
+  matrix; also handy for piping through `jq` locally).
+- `build --device <id> [--ui <name>]` — compile bootpros for one device into
+  `--bootpro-cache-dir` (default `build/pmos-bootpros`). Hits the local cache
+  first, then the HTTP cache, otherwise downloads the rootfs and compiles.
+- `channel [--device <id>] [--ui <name>]` — assemble the indexed channel
+  from cached bootpros. **Cache-only**: errors out if any bootpro is missing
+  from local + HTTP cache instead of triggering a multi-GB rootfs download.
+
 ## Local run
 
-Read-only against the public cache (no AWS credentials needed):
+Build all bootpros (read-only against the public cache, no AWS creds):
 
 ```bash
-cargo run -p fastboopmos --release -- \
-  --fastboop /path/to/fastboop \
-  --output dist/edge.channel
+for d in *.yaml; do
+  ./tools/cargo-local.sh run -p fastboopmos --release -- \
+    build --device "${d%.yaml}"
+done
+./tools/cargo-local.sh run -p fastboopmos --release -- \
+  channel --output dist/edge.channel
 ```
 
-Targeted to a single device:
+Targeted to a single device + UI:
 
 ```bash
-cargo run -p fastboopmos --release -- \
-  --fastboop /path/to/fastboop \
-  --only-device oneplus-fajita \
-  --output dist/edge.channel
+./tools/cargo-local.sh run -p fastboopmos --release -- \
+  build --device oneplus-fajita --ui phosh
+./tools/cargo-local.sh run -p fastboopmos --release -- \
+  channel --device oneplus-fajita --output dist/edge.channel
 ```
+
+`./tools/cargo-local.sh` prefers crates from a local `./fastboop` checkout by
+emitting a temporary `[patch.crates-io]` overlay for the fastboop crates used by
+fastboopmos. If `./fastboop` is absent, it falls back to normal crates.io resolution.
 
 `--cache-url` defaults to the public bucket; pass `--cache-url ""` (or set
-`FASTBOOPMOS_CACHE_URL=`) to force a cold compile of everything.
+`FASTBOOPMOS_CACHE_URL=`) to disable HTTP cache lookups (forces a cold
+compile under `build`; makes `channel` succeed only against the local cache
+dir).
 
 ## Automation
 
-- `.github/workflows/channel-build.yml`
-  - runs on PRs, pushes to `main`, nightly, and manual dispatch
-  - supports optional `device` input for targeted runs
-  - runs `fastboopmos` to assemble `dist/edge.channel`, then `aws s3 sync`
-    pushes any newly-compiled bootpros back to B2
-  - uploads workflow artifact every run
-  - on `push` to `main` and nightly schedule, updates
-    `infra/k8s/fastboopmos/latest.txt` to the new artifact id
+- `.github/workflows/channel-build.yml` runs on PRs, pushes to `main`,
+  nightly, and manual dispatch with an optional `device` input.
+
+  Three jobs:
+
+  1. **`prepare`** — builds the `fastboopmos` release binary, runs
+     `fastboopmos list` to compute the build matrix (filtered by the
+     workflow_dispatch `device` input if present), and uploads the binary as
+     a workflow artifact so downstream jobs share an identical build.
+  2. **`bootpro`** — matrix fan-out: one job per `(device, ui)` pair, with
+     `fail-fast: false` and `max-parallel: 4` to bound concurrent rootfs
+     downloads. Each slot runs `fastboopmos build` then `aws s3 sync`s the
+     freshly-compiled bootpros to B2. The upload runs under
+     `if: always() && hashFiles(...)` so partial-progress failures still
+     persist whatever they did compile.
+  3. **`channel`** — needs `bootpro`. Runs `fastboopmos channel` (cache-only)
+     to assemble `dist/edge.channel`, uploads the workflow artifact, and on
+     `push`/`schedule` updates `infra/k8s/fastboopmos/latest.txt`.
+
+  A failed `bootpro` slot blocks the `channel` job, but bootpros from the
+  successful slots are now cached for the next workflow run — re-running
+  picks up where the failure left off instead of re-downloading every
+  rootfs.

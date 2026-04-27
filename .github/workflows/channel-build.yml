@@ -20,16 +20,10 @@ permissions:
   contents: write
 
 jobs:
-  build:
+  prepare:
     runs-on: ubuntu-latest
-    env:
-      FASTBOOP_VERSION: 0.0.1-rc.15
-      CACHE_BUCKET: ${{ secrets.FASTBOOPMOS_CACHE_BUCKET }}
-      CACHE_ENDPOINT_URL: ${{ vars.FASTBOOPMOS_CACHE_ENDPOINT_URL }}
-      CACHE_PREFIX: ${{ vars.FASTBOOPMOS_CACHE_PREFIX || 'fastboopmos' }}
-      AWS_ACCESS_KEY_ID: ${{ secrets.FASTBOOPMOS_CACHE_ACCESS_KEY_ID }}
-      AWS_SECRET_ACCESS_KEY: ${{ secrets.FASTBOOPMOS_CACHE_SECRET_ACCESS_KEY }}
-      AWS_EC2_METADATA_DISABLED: "true"
+    outputs:
+      matrix: ${{ steps.list.outputs.matrix }}
     steps:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
@@ -48,34 +42,74 @@ jobs:
       - name: Build fastboopmos
         run: cargo build --release --locked -p fastboopmos
 
-      - name: Download fastboop CLI release
+      - name: Compute matrix
+        id: list
+        env:
+          DEVICE_INPUT: ${{ github.event.inputs.device }}
         run: |
           set -euo pipefail
-          tmp=$(mktemp -d)
-          curl -fsSL "https://github.com/samcday/fastboop/releases/download/v${FASTBOOP_VERSION}/fastboop-cli-x86_64-unknown-linux-musl.tar.gz" \
-            | tar -xz -C "$tmp"
-          mkdir -p bin
-          install -m 0755 "$(find "$tmp" -type f -name fastboop)" bin/fastboop
-          rm -rf "$tmp"
+          raw="$(./target/release/fastboopmos list)"
+          if [ -n "${DEVICE_INPUT:-}" ]; then
+            raw="$(printf '%s' "$raw" | jq --arg d "$DEVICE_INPUT" '[.[] | select(.device==$d)]')"
+          fi
+          count="$(printf '%s' "$raw" | jq 'length')"
+          if [ "$count" -eq 0 ]; then
+            echo "::error::matrix is empty (no (device,ui) pairs to build)"
+            exit 1
+          fi
+          echo "matrix=$(printf '%s' "$raw" | jq -c .)" >> "$GITHUB_OUTPUT"
 
-      - name: Build channel
+      - name: Upload fastboopmos binary
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7
+        with:
+          name: fastboopmos-bin
+          path: target/release/fastboopmos
+          if-no-files-found: error
+
+  bootpro:
+    needs: prepare
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      max-parallel: 10
+      matrix:
+        include: ${{ fromJSON(needs.prepare.outputs.matrix) }}
+    env:
+      CACHE_BUCKET: ${{ secrets.FASTBOOPMOS_CACHE_BUCKET }}
+      CACHE_ENDPOINT_URL: ${{ vars.FASTBOOPMOS_CACHE_ENDPOINT_URL }}
+      CACHE_PREFIX: ${{ vars.FASTBOOPMOS_CACHE_PREFIX || 'fastboopmos' }}
+      AWS_ACCESS_KEY_ID: ${{ secrets.FASTBOOPMOS_CACHE_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.FASTBOOPMOS_CACHE_SECRET_ACCESS_KEY }}
+      AWS_EC2_METADATA_DISABLED: "true"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Download fastboopmos binary
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
+        with:
+          name: fastboopmos-bin
+          path: bin
+
+      - name: Make binary executable
+        run: chmod +x bin/fastboopmos
+
+      - name: Build bootpro
+        env:
+          DEVICE: ${{ matrix.device }}
+          UI: ${{ matrix.ui }}
         run: |
           set -euo pipefail
           : "${CACHE_BUCKET:?missing FASTBOOPMOS_CACHE_BUCKET secret}"
           : "${CACHE_ENDPOINT_URL:?missing FASTBOOPMOS_CACHE_ENDPOINT_URL variable}"
 
-          DEVICE_INPUT="${{ github.event.inputs.device || '' }}"
-          args=(
-            --fastboop ./bin/fastboop
+          ./bin/fastboopmos build \
+            --device "$DEVICE" \
+            --ui "$UI" \
             --cache-url "${CACHE_ENDPOINT_URL%/}/${CACHE_BUCKET}/${CACHE_PREFIX}"
-            --output dist/edge.channel
-          )
-          if [ -n "$DEVICE_INPUT" ]; then
-            args+=(--only-device "$DEVICE_INPUT")
-          fi
-          ./target/release/fastboopmos "${args[@]}"
 
       - name: Push new bootpros to cache
+        if: always() && hashFiles('build/pmos-bootpros/*') != ''
         run: |
           set -euo pipefail
           : "${AWS_ACCESS_KEY_ID:?missing FASTBOOPMOS_CACHE_ACCESS_KEY_ID secret}"
@@ -85,6 +119,44 @@ jobs:
             --endpoint-url "$CACHE_ENDPOINT_URL" \
             build/pmos-bootpros/ \
             "s3://$CACHE_BUCKET/$CACHE_PREFIX/edge/bootpro/"
+
+  channel:
+    needs: bootpro
+    runs-on: ubuntu-latest
+    env:
+      CACHE_BUCKET: ${{ secrets.FASTBOOPMOS_CACHE_BUCKET }}
+      CACHE_ENDPOINT_URL: ${{ vars.FASTBOOPMOS_CACHE_ENDPOINT_URL }}
+      CACHE_PREFIX: ${{ vars.FASTBOOPMOS_CACHE_PREFIX || 'fastboopmos' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Download fastboopmos binary
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
+        with:
+          name: fastboopmos-bin
+          path: bin
+
+      - name: Make binary executable
+        run: chmod +x bin/fastboopmos
+
+      - name: Assemble channel
+        env:
+          DEVICE_INPUT: ${{ github.event.inputs.device }}
+        run: |
+          set -euo pipefail
+          : "${CACHE_BUCKET:?missing FASTBOOPMOS_CACHE_BUCKET secret}"
+          : "${CACHE_ENDPOINT_URL:?missing FASTBOOPMOS_CACHE_ENDPOINT_URL variable}"
+
+          args=(
+            channel
+            --cache-url "${CACHE_ENDPOINT_URL%/}/${CACHE_BUCKET}/${CACHE_PREFIX}"
+            --output dist/edge.channel
+          )
+          if [ -n "${DEVICE_INPUT:-}" ]; then
+            args+=(--device "$DEVICE_INPUT")
+          fi
+          ./bin/fastboopmos "${args[@]}"
 
       - name: Write channel metadata
         run: |
