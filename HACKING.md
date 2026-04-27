@@ -42,19 +42,21 @@ No generated manifests or `.bootpro` files are committed to git.
 Read-only against the public cache (no AWS credentials needed):
 
 ```bash
-cargo run -p fastboopmos --release -- \
-  --fastboop /path/to/fastboop \
+./tools/cargo-local.sh run -p fastboopmos --release -- \
   --output dist/edge.channel
 ```
 
 Targeted to a single device:
 
 ```bash
-cargo run -p fastboopmos --release -- \
-  --fastboop /path/to/fastboop \
+./tools/cargo-local.sh run -p fastboopmos --release -- \
   --only-device oneplus-fajita \
   --output dist/edge.channel
 ```
+
+`./tools/cargo-local.sh` prefers crates from a local `./fastboop` checkout by
+emitting a temporary `[patch.crates-io]` overlay for the fastboop crates used by
+fastboopmos. If `./fastboop` is absent, it falls back to normal crates.io resolution.
 
 `--cache-url` defaults to the public bucket; pass `--cache-url ""` (or set
 `FASTBOOPMOS_CACHE_URL=`) to force a cold compile of everything.

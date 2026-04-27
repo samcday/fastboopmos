@@ -176,38 +176,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1e748733b7cbc798e1434b6ac524f0c1ff2ab456fe201501e6497c8417a4fc33"
 
 [[package]]
-name = "camino"
-version = "1.2.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e629a66d692cb9ff1a1c664e41771b3dcaf961985a9774c0eb0bd1b51cf60a48"
-dependencies = [
- "serde_core",
-]
-
-[[package]]
-name = "cargo-platform"
-version = "0.1.9"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e35af189006b9c0f00a064685c727031e3ed2d8020f7ba284d78cc2671bd36ea"
-dependencies = [
- "serde",
-]
-
-[[package]]
-name = "cargo_metadata"
-version = "0.19.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dd5eb614ed4c27c5d706420e4320fbe3216ab31fa1c33cd8246ac36dae4479ba"
-dependencies = [
- "camino",
- "cargo-platform",
- "semver",
- "serde",
- "serde_json",
- "thiserror 2.0.18",
-]
-
-[[package]]
 name = "cc"
 version = "1.2.60"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -420,7 +388,9 @@ dependencies = [
 
 [[package]]
 name = "fastboop-bootpro"
-version = "0.0.1-rc.17"
+version = "0.0.1-rc.18"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "31481f550865f2942fbeced62bf0a072e6b33379b9484cab2fe048d6fcb2afc3"
 dependencies = [
  "anyhow",
  "fastboop-core",
@@ -435,7 +405,6 @@ dependencies = [
  "gibblox-mbr",
  "gibblox-pipeline",
  "gibblox-xz",
- "hadris-part",
  "serde_yaml",
  "sha2",
  "tokio",
@@ -445,7 +414,9 @@ dependencies = [
 
 [[package]]
 name = "fastboop-core"
-version = "0.0.1-rc.17"
+version = "0.0.1-rc.18"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5b99bb76555bdb5f734ad08051371809cd620e3f9257d800c3c029242049c04b"
 dependencies = [
  "fastboop-schema",
  "futures-util",
@@ -459,7 +430,9 @@ dependencies = [
 
 [[package]]
 name = "fastboop-schema"
-version = "0.0.1-rc.17"
+version = "0.0.1-rc.18"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "737e4b4b8303d999fd7e1589841d8b2b7c2ae7d561a639aa84e57e07f338b4fd"
 dependencies = [
  "gibblox-pipeline",
  "serde",
@@ -470,7 +443,6 @@ name = "fastboopmos"
 version = "0.0.0"
 dependencies = [
  "anyhow",
- "cargo_metadata",
  "clap",
  "fastboop-bootpro",
  "fastboop-core",
@@ -1646,10 +1618,6 @@ name = "semver"
 version = "1.0.28"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8a7852d02fc848982e0c167ef163aaff9cd91dc640ba85e263cb1ce46fae51cd"
-dependencies = [
- "serde",
- "serde_core",
-]
 
 [[package]]
 name = "serde"
