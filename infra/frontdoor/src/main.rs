@@ -24,6 +24,7 @@ const CHUNK_SIZE: usize = 1024 * 1024;
 const USER_AGENT: &str = "fastboopmos-frontdoor/0.1";
 const GH_API_VERSION: &str = "2022-11-28";
 const PER_PAGE: u32 = 100;
+const GHA_EDGE_CHANNEL_ARTIFACT_NAME: &str = "edge-channel";
 
 // ---------------------------------------------------------------------------
 // Config
@@ -178,11 +179,12 @@ struct ArtifactListResponse {
 
 #[derive(serde::Deserialize)]
 struct Artifact {
+    name: String,
     expired: Option<bool>,
     archive_download_url: Option<String>,
 }
 
-async fn resolve_single_artifact(state: &AppState, run_id: &str) -> Result<String, AppError> {
+async fn resolve_edge_channel_artifact(state: &AppState, run_id: &str) -> Result<String, AppError> {
     let mut page = 1u32;
     let mut artifacts = Vec::new();
 
@@ -215,7 +217,7 @@ async fn resolve_single_artifact(state: &AppState, run_id: &str) -> Result<Strin
 
         let count = payload.artifacts.len();
         for a in payload.artifacts {
-            if a.expired != Some(true) {
+            if a.expired != Some(true) && a.name == GHA_EDGE_CHANNEL_ARTIFACT_NAME {
                 artifacts.push(a);
             }
         }
@@ -228,15 +230,15 @@ async fn resolve_single_artifact(state: &AppState, run_id: &str) -> Result<Strin
     if artifacts.is_empty() {
         return Err(AppError(
             StatusCode::NOT_FOUND,
-            format!("no active artifacts found for run {run_id}"),
+            format!("no active {GHA_EDGE_CHANNEL_ARTIFACT_NAME} artifact found for run {run_id}"),
         ));
     }
     if artifacts.len() != 1 {
         return Err(AppError(
             StatusCode::CONFLICT,
             format!(
-                "run {run_id} has {} active artifacts; expected exactly 1",
-                artifacts.len()
+                "run {run_id} has {} active {GHA_EDGE_CHANNEL_ARTIFACT_NAME} artifacts; expected exactly 1",
+                artifacts.len(),
             ),
         ));
     }
@@ -443,7 +445,7 @@ async fn gha_materialize(state: &AppState, run_id: &str) -> Result<GhaCacheEntry
         return Ok(entry);
     }
 
-    let archive_url = resolve_single_artifact(state, run_id).await?;
+    let archive_url = resolve_edge_channel_artifact(state, run_id).await?;
 
     let tmp_dir = cache_dir.join(format!(".tmp-{key}"));
     fs::create_dir_all(&tmp_dir).await.ok();
