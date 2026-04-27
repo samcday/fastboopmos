@@ -23,7 +23,6 @@ jobs:
   build:
     runs-on: ubuntu-latest
     env:
-      FASTBOOP_VERSION: 0.0.1-rc.15
       CACHE_BUCKET: ${{ secrets.FASTBOOPMOS_CACHE_BUCKET }}
       CACHE_ENDPOINT_URL: ${{ vars.FASTBOOPMOS_CACHE_ENDPOINT_URL }}
       CACHE_PREFIX: ${{ vars.FASTBOOPMOS_CACHE_PREFIX || 'fastboopmos' }}
@@ -48,16 +47,6 @@ jobs:
       - name: Build fastboopmos
         run: cargo build --release --locked -p fastboopmos
 
-      - name: Download fastboop CLI release
-        run: |
-          set -euo pipefail
-          tmp=$(mktemp -d)
-          curl -fsSL "https://github.com/samcday/fastboop/releases/download/v${FASTBOOP_VERSION}/fastboop-cli-x86_64-unknown-linux-musl.tar.gz" \
-            | tar -xz -C "$tmp"
-          mkdir -p bin
-          install -m 0755 "$(find "$tmp" -type f -name fastboop)" bin/fastboop
-          rm -rf "$tmp"
-
       - name: Build channel
         run: |
           set -euo pipefail
@@ -66,7 +55,6 @@ jobs:
 
           DEVICE_INPUT="${{ github.event.inputs.device || '' }}"
           args=(
-            --fastboop ./bin/fastboop
             --cache-url "${CACHE_ENDPOINT_URL%/}/${CACHE_BUCKET}/${CACHE_PREFIX}"
             --output dist/edge.channel
           )
