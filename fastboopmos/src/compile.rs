@@ -1,4 +1,4 @@
-use anyhow::{Context, Result};
+use anyhow::{Context, Result, bail};
 use fastboop_bootpro::{BootProfileOptimizeOptions, compile_manifest_yaml_with_optimize};
 use futures_util::StreamExt;
 use sha2::{Digest, Sha256};
@@ -10,6 +10,16 @@ use crate::artifact;
 use crate::index::RootfsSelection;
 
 const HTTP_CACHE_TIMEOUT: Duration = Duration::from_secs(30);
+
+#[derive(Copy, Clone, Debug)]
+pub enum EnsureMode {
+    /// Local cache hit → HTTP cache hit → download rootfs and compile locally.
+    Compile,
+    /// Local cache hit → HTTP cache hit → error. Used by `channel` so a
+    /// missing bootpro surfaces as a hard failure instead of silently
+    /// triggering a multi-GB rootfs download.
+    CacheOnly,
+}
 
 pub fn scope_hash(manifest_content: &str, bootpro_tool_version: &str) -> String {
     let payload = format!("{bootpro_tool_version}\n{manifest_content}");
@@ -102,6 +112,7 @@ pub async fn ensure_bootpro(
     selection: &RootfsSelection,
     artifact_cache_dir: &Path,
     bootpro_cache_dir: &Path,
+    mode: EnsureMode,
 ) -> Result<PathBuf> {
     let scope = scope_hash(manifest_content, bootpro_tool_version);
     let filename = format!("{}-{}.bootpro", selection.image_sha512, scope);
@@ -117,6 +128,14 @@ pub async fn ensure_bootpro(
     {
         tracing::info!(target = %selection.target_name(), path = %output_path.display(), "bootpro HTTP cache hit");
         return Ok(output_path);
+    }
+
+    if matches!(mode, EnsureMode::CacheOnly) {
+        bail!(
+            "cache-only: bootpro for {} not in local or HTTP cache (key {})",
+            selection.target_name(),
+            filename
+        );
     }
 
     tracing::info!(target = %selection.target_name(), "bootpro cache miss, compiling");

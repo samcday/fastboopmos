@@ -256,23 +256,21 @@ pub fn select_rootfs_images(release: &Value, pmos_device: &str) -> Result<Vec<Ro
     Ok(selections)
 }
 
-pub fn filter_rootfs_images_by_variant(
+pub fn filter_rootfs_images_by_ui(
     selections: Vec<RootfsSelection>,
     requested: &str,
 ) -> Result<Vec<RootfsSelection>> {
     let requested = requested.trim();
     if requested.is_empty() {
-        bail!("--only-variant must not be empty");
+        bail!("--ui must not be empty");
     }
 
     let filtered: Vec<RootfsSelection> = selections
         .into_iter()
-        .filter(|selection| {
-            selection.ui_name == requested || selection.variant.as_deref() == Some(requested)
-        })
+        .filter(|selection| selection.ui_name == requested)
         .collect();
     if filtered.is_empty() {
-        bail!("no usable rootfs images found for variant {requested:?}");
+        bail!("no usable rootfs images found for ui {requested:?}");
     }
     Ok(filtered)
 }
@@ -362,28 +360,29 @@ mod tests {
     }
 
     #[test]
-    fn filters_rootfs_images_by_ui_variant() {
+    fn filters_rootfs_images_by_ui_name() {
         let selections = vec![selection("phosh", None), selection("gnome-mobile", None)];
-        let filtered = filter_rootfs_images_by_variant(selections, "phosh").unwrap();
+        let filtered = filter_rootfs_images_by_ui(selections, "phosh").unwrap();
         assert_eq!(filtered.len(), 1);
         assert_eq!(filtered[0].ui_name, "phosh");
     }
 
     #[test]
-    fn filters_rootfs_images_by_image_variant() {
+    fn filters_rootfs_images_keeps_all_hw_variants_for_ui() {
+        // Both ebbg and tianma share ui_name="phosh" — filtering on the UI
+        // keeps both, and the per-selection compile loop handles each panel.
         let selections = vec![
-            selection("phosh", None),
-            selection("phosh", Some("factory")),
+            selection("phosh", Some("ebbg")),
+            selection("phosh", Some("tianma")),
+            selection("gnome-mobile", Some("ebbg")),
         ];
-        let filtered = filter_rootfs_images_by_variant(selections, "factory").unwrap();
-        assert_eq!(filtered.len(), 1);
-        assert_eq!(filtered[0].variant.as_deref(), Some("factory"));
+        let filtered = filter_rootfs_images_by_ui(selections, "phosh").unwrap();
+        assert_eq!(filtered.len(), 2);
     }
 
     #[test]
-    fn rejects_missing_variant_filter() {
-        let err =
-            filter_rootfs_images_by_variant(vec![selection("phosh", None)], "plasma").unwrap_err();
+    fn rejects_missing_ui_filter() {
+        let err = filter_rootfs_images_by_ui(vec![selection("phosh", None)], "plasma").unwrap_err();
         assert!(format!("{err}").contains("no usable rootfs images"));
     }
 }
