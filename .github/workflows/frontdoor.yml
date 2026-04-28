@@ -54,7 +54,6 @@ jobs:
         working-directory: infra/frontdoor
         run: |
           wash push "${IMAGE}:${TAG}" target/wasm32-wasip2/release/frontdoor_edge.wasm
-          wash push "${IMAGE}:latest" target/wasm32-wasip2/release/frontdoor_edge.wasm
 
       - name: Update workload image tag
         if: github.event_name != 'pull_request'
