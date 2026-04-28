@@ -16,5 +16,6 @@ spec:
             type: PathPrefix
             value: /
       backendRefs:
-        - name: fastboopmos
+        - name: runtime-gateway
+          namespace: wasmcloud
           port: 80

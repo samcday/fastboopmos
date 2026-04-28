@@ -14,85 +14,62 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
   packages: write
 
 jobs:
-  build:
-    strategy:
-      matrix:
-        include:
-          - runner: ubuntu-latest
-            platform: linux/amd64
-          - runner: ubuntu-24.04-arm
-            platform: linux/arm64
-    runs-on: ${{ matrix.runner }}
+  build-edge:
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@b5ca514318bd6ebac0fb2aedd5d36ec1b5c232a2 # v3
-
-      - name: Log in to GHCR
-        if: github.event_name != 'pull_request'
-        uses: docker/login-action@74a5d142397b4f367a81961eba4e8cd7edddf772 # v3
+      - name: Set up Rust toolchain + cache
+        uses: actions-rust-lang/setup-rust-toolchain@1fbea72663f6d4c03efaab13560c8a24cfd2a7cc # v1.9.0
         with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          toolchain: 1.94.1
+          target: wasm32-wasip2
 
-      - name: Build and push by digest
-        id: build
-        uses: docker/build-push-action@14487ce63c7a62a4a324b0bfb37086795e31c6c1 # v6
-        with:
-          context: infra/frontdoor
-          platforms: ${{ matrix.platform }}
-          outputs: type=image,name=ghcr.io/${{ github.repository_owner }}/fastboopmos-frontdoor,push-by-digest=true,name-canonical=true,push=${{ github.event_name != 'pull_request' }}
-          cache-from: type=gha,scope=${{ matrix.platform }}
-          cache-to: type=gha,scope=${{ matrix.platform }},mode=max
+      - name: Clippy
+        working-directory: infra/frontdoor
+        run: cargo clippy --target wasm32-wasip2 -p frontdoor-edge --locked -- -D warnings
 
-      - name: Export digest
+      - name: Build wasm component
+        working-directory: infra/frontdoor
+        run: cargo build --release --target wasm32-wasip2 -p frontdoor-edge --locked
+
+      - name: Install wash
         if: github.event_name != 'pull_request'
         run: |
-          mkdir -p $RUNNER_TEMP/digests
-          digest="${{ steps.build.outputs.digest }}"
-          touch "$RUNNER_TEMP/digests/${digest#sha256:}"
+          curl -s https://packagecloud.io/install/repositories/wasmcloud/core/script.deb.sh | sudo bash
+          sudo apt-get install wash
 
-      - name: Upload digest
+      - name: Push wasm component to GHCR
         if: github.event_name != 'pull_request'
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
-        with:
-          name: digests-${{ matrix.platform == 'linux/amd64' && 'amd64' || 'arm64' }}
-          path: ${{ runner.temp }}/digests/*
-          if-no-files-found: error
-          retention-days: 1
-
-  merge:
-    runs-on: ubuntu-latest
-    if: github.event_name != 'pull_request'
-    needs: build
-    steps:
-      - name: Download digests
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
-        with:
-          path: ${{ runner.temp }}/digests
-          pattern: digests-*
-          merge-multiple: true
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@b5ca514318bd6ebac0fb2aedd5d36ec1b5c232a2 # v3
-
-      - name: Log in to GHCR
-        uses: docker/login-action@74a5d142397b4f367a81961eba4e8cd7edddf772 # v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Create manifest list and push
-        working-directory: ${{ runner.temp }}/digests
+        env:
+          WASH_REG_USER: ${{ github.actor }}
+          WASH_REG_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+          IMAGE: ghcr.io/${{ github.repository_owner }}/fastboopmos-frontdoor-edge
+          TAG: ${{ github.run_id }}
+        working-directory: infra/frontdoor
         run: |
-          docker buildx imagetools create \
-            -t ghcr.io/${{ github.repository_owner }}/fastboopmos-frontdoor:latest \
-            $(printf 'ghcr.io/${{ github.repository_owner }}/fastboopmos-frontdoor@sha256:%s ' *)
+          wash push "${IMAGE}:${TAG}" target/wasm32-wasip2/release/frontdoor_edge.wasm
+          wash push "${IMAGE}:latest" target/wasm32-wasip2/release/frontdoor_edge.wasm
+
+      - name: Update workload image tag
+        if: github.event_name != 'pull_request'
+        env:
+          IMAGE: ghcr.io/${{ github.repository_owner }}/fastboopmos-frontdoor-edge
+          TAG: ${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          perl -0pi -e "s#image: ghcr.io/[^[:space:]]+/fastboopmos-frontdoor-edge:[^[:space:]]+#image: ${IMAGE}:${TAG}#" infra/k8s/fastboopmos/workload-deployment.yaml
+          if git diff --quiet -- infra/k8s/fastboopmos/workload-deployment.yaml; then
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add infra/k8s/fastboopmos/workload-deployment.yaml
+          git commit -m "infra: advance frontdoor edge component"
+          git push

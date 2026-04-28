@@ -1,25 +1,24 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 namespace: fastboopmos
+configurations:
+  - kustomizeconfig.yaml
 resources:
   - certificate.yaml
-  - deployment.yaml
   - gitrepo.yaml
   - release-secret.yaml
   - httproute.yaml
-  - service.yaml
+  - workload-deployment.yaml
   - tofu.yaml
   - tofu-env.yaml
 configMapGenerator:
   - name: fastboopmos-frontdoor-config
     literals:
-      - PORT=8080
       - CACHE_DIR=/cache
-      - MIN_FREESPACE_PCT=10
-      - REQUEST_TIMEOUT_SECONDS=300
       - GITHUB_OWNER=samcday
       - GITHUB_REPO=fastboopmos
       - ASSET_NAME=edge.channel
       - SHA256_ASSET_NAME=edge.channel.sha256
+      - MAX_DOWNLOAD_BYTES=1073741824
     files:
       - EDGE_CHANNEL_ARTIFACT_ID=latest.txt
