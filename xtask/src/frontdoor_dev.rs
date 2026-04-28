@@ -6,6 +6,9 @@ use std::process::{Child, Command, Stdio};
 use std::sync::mpsc;
 use std::time::{Duration, Instant};
 
+const DEFAULT_ADDR: &str = "127.0.0.1:8080";
+const WASM_PATH: &str = "infra/frontdoor/target/wasm32-wasip2/debug/frontdoor_edge.wasm";
+
 pub fn run() {
     let edge_artifact_id = fs::read_to_string("infra/k8s/fastboopmos/latest.txt")
         .expect("failed to read infra/k8s/fastboopmos/latest.txt")
@@ -22,7 +25,11 @@ pub fn run() {
         std::process::exit(1);
     }
 
-    let mut child = serve(&edge_artifact_id, &cache_dir.to_string_lossy());
+    let mut child = serve(
+        &edge_artifact_id,
+        &cache_dir.to_string_lossy(),
+        DEFAULT_ADDR,
+    );
 
     let (tx, rx) = mpsc::channel();
     let mut watcher = notify::recommended_watcher(move |res: notify::Result<notify::Event>| {
@@ -35,10 +42,19 @@ pub fn run() {
     .expect("failed to create file watcher");
 
     watcher
-        .watch(Path::new("infra/frontdoor/src"), RecursiveMode::Recursive)
-        .expect("failed to watch infra/frontdoor/src");
+        .watch(
+            Path::new("infra/frontdoor/crates"),
+            RecursiveMode::Recursive,
+        )
+        .expect("failed to watch infra/frontdoor/crates");
+    watcher
+        .watch(
+            Path::new("infra/frontdoor/Cargo.toml"),
+            RecursiveMode::NonRecursive,
+        )
+        .expect("failed to watch infra/frontdoor/Cargo.toml");
 
-    eprintln!("watching infra/frontdoor/src/ for changes...");
+    eprintln!("watching infra/frontdoor/crates/ for changes...");
 
     loop {
         match rx.recv_timeout(Duration::from_millis(500)) {
@@ -64,10 +80,14 @@ pub fn run() {
         eprintln!("\n--- change detected, rebuilding... ---\n");
 
         if build() {
-            eprintln!("build succeeded, restarting frontdoor...");
+            eprintln!("build succeeded, restarting wasmtime...");
             let _ = child.kill();
             let _ = child.wait();
-            child = serve(&edge_artifact_id, &cache_dir.to_string_lossy());
+            child = serve(
+                &edge_artifact_id,
+                &cache_dir.to_string_lossy(),
+                DEFAULT_ADDR,
+            );
         } else {
             eprintln!("build failed, keeping previous version running");
         }
@@ -78,40 +98,60 @@ pub fn run() {
 }
 
 fn build() -> bool {
-    eprintln!("building frontdoor...");
+    eprintln!("building frontdoor-edge for wasm32-wasip2...");
     let status = Command::new("cargo")
         .current_dir("infra/frontdoor")
         .env_remove("RUSTUP_TOOLCHAIN")
-        .args(["build"])
+        .args(["build", "--target", "wasm32-wasip2", "-p", "frontdoor-edge"])
         .status()
         .expect("failed to run cargo build");
     status.success()
 }
 
-fn serve(edge_artifact_id: &str, cache_dir: &str) -> Child {
-    let bin_path = "infra/frontdoor/target/debug/frontdoor";
-    eprintln!("starting frontdoor on http://127.0.0.1:8080/");
+fn serve(edge_artifact_id: &str, cache_dir: &str, addr: &str) -> Child {
+    let dir_arg = format!("{cache_dir}::/cache");
+    eprintln!("starting wasmtime serve on http://{addr}/");
 
-    let mut cmd = Command::new(bin_path);
-    cmd.env("PORT", "8080")
-        .env("CACHE_DIR", cache_dir)
-        .env("EDGE_CHANNEL_ARTIFACT_ID", edge_artifact_id)
-        .env("GITHUB_OWNER", "samcday")
-        .env("GITHUB_REPO", "fastboopmos");
+    let mut args = vec![
+        "serve".to_string(),
+        "--wasi".to_string(),
+        "cli".to_string(),
+        "--wasi".to_string(),
+        "http".to_string(),
+        "--addr".to_string(),
+        addr.to_string(),
+        "--env".to_string(),
+        format!(
+            "RUST_LOG={}",
+            std::env::var("RUST_LOG").as_deref().unwrap_or("info")
+        ),
+        "--env".to_string(),
+        format!("EDGE_CHANNEL_ARTIFACT_ID={edge_artifact_id}"),
+        "--env".to_string(),
+        "GITHUB_OWNER=samcday".to_string(),
+        "--env".to_string(),
+        "GITHUB_REPO=fastboopmos".to_string(),
+        "--env".to_string(),
+        "ASSET_NAME=edge.channel".to_string(),
+        "--env".to_string(),
+        "SHA256_ASSET_NAME=edge.channel.sha256".to_string(),
+        "--dir".to_string(),
+        dir_arg,
+    ];
 
     if let Ok(token) = std::env::var("GITHUB_TOKEN") {
-        cmd.env("GITHUB_TOKEN", &token);
+        args.push("--env".to_string());
+        args.push(format!("GITHUB_TOKEN={token}"));
     }
 
-    if let Ok(rust_log) = std::env::var("RUST_LOG") {
-        cmd.env("RUST_LOG", &rust_log);
-    }
+    args.push(WASM_PATH.to_string());
 
-    let mut child = cmd
+    let mut child = Command::new("wasmtime")
+        .args(args)
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .spawn()
-        .expect("failed to start frontdoor");
+        .expect("failed to start wasmtime serve");
 
     if let Some(stdout) = child.stdout.take() {
         std::thread::spawn(move || {

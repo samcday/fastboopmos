@@ -1,0 +1,11 @@
+nameReference:
+  - kind: ConfigMap
+    version: v1
+    fieldSpecs:
+      - path: spec/template/spec/components/localResources/environment/configFrom/name
+        kind: WorkloadDeployment
+  - kind: Secret
+    version: v1
+    fieldSpecs:
+      - path: spec/template/spec/components/localResources/environment/secretFrom/name
+        kind: WorkloadDeployment
