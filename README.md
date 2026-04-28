@@ -2,7 +2,7 @@
 
 Live boot (without flashing) the latest postmarketOS edge release on your pocket computer, from a web browser.
 
-Get started now: https://www.fastboop.win/v0.0.1-rc.15/?channel=https://fastboopmos.samcday.com/edge.channel
+Get started now: https://www.fastboop.win/?channel=https://fastboopmos.samcday.com/edge.channel
 
 The following devices are supported so far:
 
