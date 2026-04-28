@@ -10,7 +10,7 @@ spec:
         hostgroup: default
       components:
         - name: frontdoor
-          image: ghcr.io/samcday/fastboopmos-frontdoor-edge:latest
+          image: ghcr.io/samcday/fastboopmos-frontdoor-edge:25082009948
           imagePullPolicy: Always
           localResources:
             environment:
