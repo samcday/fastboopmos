@@ -8,6 +8,7 @@ The following devices are supported so far:
 
  * Google Pixel 3a
  * OnePlus 6(T)
+ * Samsung Galaxy A5
  * Samsung Galaxy Tab A (9.7")
  * SHIFT6mq
  * Xiaomi POCO F1
