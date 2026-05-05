@@ -13,7 +13,7 @@ rootfs:
             size_bytes: {{ image_size }}
 kernel:
   path: /vmlinuz
-  ext4:
+  fat:
     gpt:
       index: 0
       android_sparseimg:
@@ -25,7 +25,7 @@ kernel:
             size_bytes: {{ image_size }}
 dtbs:
   path: /dtbs
-  ext4:
+  fat:
     gpt:
       index: 0
       android_sparseimg:
