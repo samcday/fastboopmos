@@ -4,6 +4,9 @@ metadata:
   name: fastboopmos-frontdoor
 spec:
   replicas: 2
+  kubernetes:
+    service:
+      name: fastboopmos-frontdoor
   template:
     spec:
       hostSelector:
