@@ -15,8 +15,8 @@ path = "src/main.rs"
 [dependencies]
 anyhow = "1"
 clap = { version = "4", features = ["derive", "env"] }
-fastboop-bootpro = "0.0.1-rc.19"
-fastboop-core = "0.0.1-rc.19"
+fastboop-bootpro = "0.0.1-rc.21"
+fastboop-core = "0.0.1-rc.21"
 hex = "0.4"
 minijinja = "2"
 reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "stream", "json"] }
