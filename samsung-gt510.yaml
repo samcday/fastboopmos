@@ -1,5 +1,6 @@
 id: pmos-{{ release_name }}-{{ ui_name }}-{{ target_name }}
 display_name: postmarketOS {{ release_name }} {{ ui_name }} {{ target_name }}
+extra_cmdline: splash
 rootfs:
   ext4:
     mbr:
